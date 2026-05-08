@@ -35,6 +35,7 @@ func New() *schema.Provider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"raff_project": resourceProject(),
+			"raff_vm":      resourceVM(),
 		},
 
 		ConfigureContextFunc: configure,

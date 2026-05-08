@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Editor / IDE
+*.swp
+.vscode/
+.idea/
+
+# Go build artifacts
+/bin/
+*.test
+*.out
+coverage.*
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Provider binary
+terraform-provider-raff

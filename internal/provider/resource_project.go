@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	raff "github.com/rafftechnologies/raff-go"
+	"github.com/rafftechnologies/raff-go/spec"
 )
 
 func resourceProject() *schema.Resource {
@@ -77,16 +78,21 @@ func resourceProject() *schema.Resource {
 func resourceProjectCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*raff.Client)
 
-	project, _, err := client.Projects.Create(ctx, &raff.ProjectCreateRequest{
-		Name:          d.Get("name").(string),
-		Description:   d.Get("description").(string),
-		DefaultRegion: d.Get("default_region").(string),
-	})
+	req := &raff.CreateProjectRequest{Name: d.Get("name").(string)}
+	if v := d.Get("description").(string); v != "" {
+		req.Description = raff.String(v)
+	}
+	if v := d.Get("default_region").(string); v != "" {
+		r := spec.CreateProjectRequestDefaultRegion(v)
+		req.DefaultRegion = &r
+	}
+
+	project, _, err := client.Projects.Create(ctx, req)
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	d.SetId(project.ID)
+	d.SetId(project.ID.String())
 
 	return setProjectState(d, project)
 }
@@ -97,7 +103,7 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, meta any) 
 	project, _, err := client.Projects.Get(ctx, d.Id())
 	if err != nil {
 		if errResp, ok := err.(*raff.ErrorResponse); ok && errResp.StatusCode == 404 {
-			d.SetId("") // Resource no longer exists
+			d.SetId("")
 			return nil
 		}
 		return diag.FromErr(err)
@@ -109,15 +115,16 @@ func resourceProjectRead(ctx context.Context, d *schema.ResourceData, meta any) 
 func resourceProjectUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*raff.Client)
 
-	req := &raff.ProjectUpdateRequest{}
+	req := &raff.UpdateProjectRequest{}
 	if d.HasChange("name") {
-		req.Name = d.Get("name").(string)
+		req.Name = raff.String(d.Get("name").(string))
 	}
 	if d.HasChange("description") {
-		req.Description = d.Get("description").(string)
+		req.Description = raff.String(d.Get("description").(string))
 	}
 	if d.HasChange("default_region") {
-		req.DefaultRegion = d.Get("default_region").(string)
+		r := spec.UpdateProjectRequestDefaultRegion(d.Get("default_region").(string))
+		req.DefaultRegion = &r
 	}
 
 	project, _, err := client.Projects.Update(ctx, d.Id(), req)
@@ -134,7 +141,7 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, meta any
 	_, err := client.Projects.Delete(ctx, d.Id())
 	if err != nil {
 		if errResp, ok := err.(*raff.ErrorResponse); ok && errResp.StatusCode == 404 {
-			return nil // Already deleted
+			return nil
 		}
 		return diag.FromErr(err)
 	}
@@ -144,13 +151,17 @@ func resourceProjectDelete(ctx context.Context, d *schema.ResourceData, meta any
 
 func setProjectState(d *schema.ResourceData, p *raff.Project) diag.Diagnostics {
 	d.Set("name", p.Name)
-	d.Set("description", p.Description)
-	d.Set("default_region", p.DefaultRegion)
-	d.Set("account_id", p.AccountID)
+	d.Set("description", raff.StringValue(p.Description))
+	d.Set("default_region", string(p.DefaultRegion))
+	d.Set("account_id", p.AccountID.String())
 	d.Set("slug", p.Slug)
 	d.Set("is_default", p.IsDefault)
 	d.Set("is_active", p.IsActive)
-	d.Set("created_by", p.CreatedBy)
+	if p.CreatedBy != nil {
+		d.Set("created_by", p.CreatedBy.String())
+	} else {
+		d.Set("created_by", "")
+	}
 	d.Set("created_at", p.CreatedAt.Format("2006-01-02T15:04:05Z"))
 	d.Set("updated_at", p.UpdatedAt.Format("2006-01-02T15:04:05Z"))
 
