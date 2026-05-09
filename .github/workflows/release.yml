@@ -1,0 +1,53 @@
+name: release
+
+# Builds GPG-signed binaries for the Terraform Registry whenever a semver tag
+# is pushed. Modeled on terraform-provider-digitalocean.
+#
+# To cut a release:
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# Required GitHub Actions secrets (set in repo Settings > Secrets):
+#   GPG_PRIVATE_KEY  — armored private key block (gpg --armor --export-secret-keys KEY_ID)
+#   PASSPHRASE       — passphrase for the GPG key
+#
+# After the first release lands on GitHub, publish the provider on the
+# Terraform Registry: https://registry.terraform.io/publish/provider
+# You'll be prompted for the GPG public key fingerprint; that's what
+# `gpg --list-secret-keys --keyid-format=long` shows.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        id: import_gpg
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'
+          args: release --clean
+        env:
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
