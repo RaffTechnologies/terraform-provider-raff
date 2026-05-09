@@ -34,8 +34,24 @@ func New() *schema.Provider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"raff_project": resourceProject(),
-			"raff_vm":      resourceVM(),
+			"raff_project":        resourceProject(),
+			"raff_vm":             resourceVM(),
+			"raff_vpc":            resourceVPC(),
+			"raff_ip":             resourceIP(),
+			"raff_security_group": resourceSecurityGroup(),
+		},
+
+		DataSourcesMap: map[string]*schema.Resource{
+			"raff_project":         dataSourceProject(),
+			"raff_projects":        dataSourceProjects(),
+			"raff_vm":              dataSourceVM(),
+			"raff_vms":             dataSourceVMs(),
+			"raff_vpc":             dataSourceVPC(),
+			"raff_vpcs":            dataSourceVPCs(),
+			"raff_ip":              dataSourceIP(),
+			"raff_ips":             dataSourceIPs(),
+			"raff_security_group":  dataSourceSecurityGroup(),
+			"raff_security_groups": dataSourceSecurityGroups(),
 		},
 
 		ConfigureContextFunc: configure,

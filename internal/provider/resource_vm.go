@@ -90,9 +90,8 @@ func resourceVM() *schema.Resource {
 			"tags": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				ForceNew:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "Tag names.",
+				Description: "Tag names. Updatable: tags are diffed against current state — additions are added, removals are removed.",
 			},
 			"vpc_id": {
 				Type:        schema.TypeString,
@@ -321,7 +320,51 @@ func resourceVMUpdate(ctx context.Context, d *schema.ResourceData, meta any) dia
 		}
 	}
 
+	if d.HasChange("tags") {
+		if err := syncVMTags(ctx, client, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	return resourceVMRead(ctx, d, meta)
+}
+
+// syncVMTags diffs the desired tag-name set against the VM's current tags and
+// applies AddTag / RemoveTag calls so the VM ends up with exactly the desired set.
+func syncVMTags(ctx context.Context, client *raff.Client, d *schema.ResourceData) error {
+	desired := map[string]struct{}{}
+	for _, t := range d.Get("tags").([]any) {
+		desired[t.(string)] = struct{}{}
+	}
+
+	vm, _, err := client.VMs.Get(ctx, d.Id())
+	if err != nil {
+		return err
+	}
+	current := map[string]string{} // name -> tag ID
+	if vm.Tags != nil {
+		for _, t := range *vm.Tags {
+			current[t.Name] = t.ID
+		}
+	}
+
+	for name := range desired {
+		if _, ok := current[name]; ok {
+			continue
+		}
+		if _, _, err := client.VMs.AddTag(ctx, d.Id(), &raff.AddVMTagRequest{Name: name}); err != nil {
+			return err
+		}
+	}
+	for name, id := range current {
+		if _, ok := desired[name]; ok {
+			continue
+		}
+		if _, _, err := client.VMs.RemoveTag(ctx, d.Id(), id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func resourceVMDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
@@ -373,6 +416,14 @@ func setVMState(d *schema.ResourceData, vm *raff.VM) diag.Diagnostics {
 	d.Set("active", vm.Active)
 	d.Set("created_at", vm.CreatedAt.Format("2006-01-02T15:04:05Z"))
 	d.Set("updated_at", vm.UpdatedAt.Format("2006-01-02T15:04:05Z"))
+
+	tagNames := []string{}
+	if vm.Tags != nil {
+		for _, t := range *vm.Tags {
+			tagNames = append(tagNames, t.Name)
+		}
+	}
+	d.Set("tags", tagNames)
 
 	return nil
 }
