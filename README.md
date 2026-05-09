@@ -154,6 +154,18 @@ go vet ./...
 
 Releases are GPG-signed and published to the [Terraform Registry](https://registry.terraform.io/providers/rafftechnologies/raff). Maintainers — see [the release workflow](.github/workflows/release.yml) and the GPG key setup notes inside.
 
+## Documentation
+
+- **Provider docs** — [registry.terraform.io/providers/rafftechnologies/raff/latest/docs](https://registry.terraform.io/providers/rafftechnologies/raff/latest/docs)
+- **API reference** — [docs.rafftechnologies.com](https://docs.rafftechnologies.com)
+- **Dashboard** — [rafftechnologies.com](https://rafftechnologies.com)
+- **Releases / changelog** — [github.com/RaffTechnologies/terraform-provider-raff/releases](https://github.com/RaffTechnologies/terraform-provider-raff/releases)
+
+## Related projects
+
+- [raff-go](https://github.com/RaffTechnologies/raff-go) — official Go SDK that powers this provider
+- [raff-cli](https://github.com/RaffTechnologies/raff-cli) — official command-line interface
+
 ## License
 
 [MIT](LICENSE)
