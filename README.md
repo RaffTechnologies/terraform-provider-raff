@@ -1,15 +1,45 @@
-# Terraform Provider for Raff Cloud
+# Raff Terraform Provider
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Official Terraform provider for managing [Raff Cloud](https://rafftechnologies.com) infrastructure. Built on top of [raff-go](https://github.com/RaffTechnologies/raff-go).
+- Documentation: [registry.terraform.io/providers/rafftechnologies/raff/latest/docs](https://registry.terraform.io/providers/rafftechnologies/raff/latest/docs)
 
 ## Requirements
 
-- Terraform 1.0+
-- A Raff API key (`raff_pub_xxx`) — generate one in the dashboard under **Team & Projects → API Keys**.
+- [Terraform](https://developer.hashicorp.com/terraform/install) 1.0+
+- [Go](https://go.dev/doc/install) 1.25+ (to build the provider plugin)
 
-## Usage
+## Building The Provider
+
+Clone the repository:
+
+```bash
+git clone git@github.com:RaffTechnologies/terraform-provider-raff.git
+cd terraform-provider-raff
+```
+
+Build the provider:
+
+```bash
+go build -o terraform-provider-raff
+```
+
+To use a locally-built provider with Terraform, add a `dev_overrides` block to your `~/.terraformrc`:
+
+```hcl
+provider_installation {
+  dev_overrides {
+    "rafftechnologies/raff" = "/absolute/path/to/terraform-provider-raff"
+  }
+  direct {}
+}
+```
+
+## Using the provider
+
+See the [Raff Provider documentation](https://registry.terraform.io/providers/rafftechnologies/raff/latest/docs) to get started using the Raff provider.
+
+Quick example:
 
 ```hcl
 terraform {
@@ -22,40 +52,8 @@ terraform {
 }
 
 provider "raff" {
-  api_key    = var.raff_api_key       # or set RAFF_API_KEY
-  project_id = var.raff_project_id    # or set RAFF_PROJECT_ID
-}
-
-resource "raff_project" "prod" {
-  name           = "production"
-  description    = "Customer-facing workloads"
-  default_region = "us-east"
-}
-
-resource "raff_vpc" "prod" {
-  name   = "prod-net"
-  cidr   = "10.0.0.0/20"
-  region = "us-east"
-}
-
-resource "raff_security_group" "web" {
-  name        = "web"
-  description = "Public web tier"
-
-  rule {
-    rule_type = "inbound"
-    protocol  = "TCP"
-    range     = "80,443"
-  }
-  rule {
-    rule_type = "inbound"
-    protocol  = "TCP"
-    range     = "22"
-  }
-  rule {
-    rule_type = "outbound"
-    protocol  = "ALL"
-  }
+  api_key    = var.raff_api_key       # or RAFF_API_KEY
+  project_id = var.raff_project_id    # or RAFF_PROJECT_ID
 }
 
 resource "raff_vm" "web" {
@@ -64,95 +62,12 @@ resource "raff_vm" "web" {
   pricing_id  = 3
   region      = "us-east"
   ssh_keys    = ["ssh-ed25519 AAAA... user@host"]
-  tags        = ["env:prod", "tier:web"]
 }
 ```
 
-## Authentication
+## Developing the Provider
 
-Set credentials via the provider block or environment variables:
-
-| Variable | Description |
-|----------|-------------|
-| `RAFF_API_KEY` | API key (required) |
-| `RAFF_API_URL` | API base URL (default `https://api.rafftechnologies.com`) |
-| `RAFF_PROJECT_ID` | Default project for project-scoped resources |
-
-Environment variables take effect when the matching provider attribute is omitted.
-
-## Resources
-
-| Resource | Operations |
-|----------|-----------|
-| `raff_project` | Manages a project. Updatable: name, description, default_region. |
-| `raff_vm` | Manages a VM. Updatable: name (rename), pricing_id (resize), tags. Storage / VPC / network attributes force replacement. |
-| `raff_vpc` | Manages a VPC. Updatable: name, description. CIDR and region force replacement. |
-| `raff_ip` | Reserves a floating IP. Type, region, billing_period force replacement. |
-| `raff_security_group` | Manages a security group. Updatable: name, description, rules. Rule updates replace the full set. |
-
-## Data Sources
-
-Both a singular (by ID) and plural (list with optional filters) data source are available for every resource type:
-
-| Data source | Filters (plural) |
-|-------------|-----------------|
-| `raff_project` / `raff_projects` | — |
-| `raff_vm` / `raff_vms` | `region`, `status` |
-| `raff_vpc` / `raff_vpcs` | — |
-| `raff_ip` / `raff_ips` | `status`, `reserved` |
-| `raff_security_group` / `raff_security_groups` | — |
-
-Example:
-
-```hcl
-data "raff_vms" "running" {
-  status = "active"
-  region = "us-east"
-}
-
-output "running_vm_count" {
-  value = length(data.raff_vms.running.vms)
-}
-```
-
-## Versioning
-
-Semantic versioning. v0.x is allowed to introduce breaking schema changes; v1.0.0+ implies a stable resource schema. See [CHANGELOG](https://github.com/RaffTechnologies/terraform-provider-raff/releases) for per-release details.
-
-## Development
-
-### Build locally
-
-```bash
-go build -o terraform-provider-raff
-```
-
-### Use a locally-built provider
-
-```bash
-mkdir -p ~/.terraform.d/plugins/registry.terraform.io/rafftechnologies/raff/0.0.1/$(go env GOOS)_$(go env GOARCH)
-cp terraform-provider-raff ~/.terraform.d/plugins/registry.terraform.io/rafftechnologies/raff/0.0.1/$(go env GOOS)_$(go env GOARCH)/
-
-cat > ~/.terraformrc <<EOF
-provider_installation {
-  dev_overrides {
-    "rafftechnologies/raff" = "$HOME/.terraform.d/plugins/registry.terraform.io/rafftechnologies/raff/0.0.1/$(go env GOOS)_$(go env GOARCH)"
-  }
-  direct {}
-}
-EOF
-```
-
-### Tests
-
-```bash
-go test ./...
-go vet ./...
-```
-
-## Releases
-
-Releases are GPG-signed and published to the [Terraform Registry](https://registry.terraform.io/providers/rafftechnologies/raff). Maintainers — see [the release workflow](.github/workflows/release.yml) and the GPG key setup notes inside.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for information about contributing to this project.
 
 ## Documentation
 
