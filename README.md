@@ -2,7 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-- Documentation: [registry.terraform.io/providers/rafftechnologies/raff/latest/docs](https://registry.terraform.io/providers/rafftechnologies/raff/latest/docs)
+Terraform provider for [Raff Cloud](https://rafftechnologies.com), built on [raff-go](https://github.com/RaffTechnologies/raff-go).
+
+> **Pre-release:** the provider has not yet been published to the Terraform Registry. To use it today, build locally and add a `dev_overrides` block (see [Building The Provider](#building-the-provider) below). Once the first signed release is published, the [Registry listing](https://registry.terraform.io/providers/rafftechnologies/raff/latest/docs) will be the canonical source.
 
 ## Requirements
 
@@ -37,9 +39,7 @@ provider_installation {
 
 ## Using the provider
 
-See the [Raff Provider documentation](https://registry.terraform.io/providers/rafftechnologies/raff/latest/docs) to get started using the Raff provider.
-
-Quick example:
+Once the first release is published to the Terraform Registry, declare the provider in your config and run `terraform init`:
 
 ```hcl
 terraform {
@@ -52,8 +52,8 @@ terraform {
 }
 
 provider "raff" {
-  api_key    = var.raff_api_key       # or RAFF_API_KEY
-  project_id = var.raff_project_id    # or RAFF_PROJECT_ID
+  api_key    = var.raff_api_key       # or RAFF_API_KEY env var
+  project_id = var.raff_project_id    # or RAFF_PROJECT_ID env var
 }
 
 resource "raff_vm" "web" {
@@ -64,6 +64,8 @@ resource "raff_vm" "web" {
   ssh_keys    = ["ssh-ed25519 AAAA... user@host"]
 }
 ```
+
+The provider supports five resources (`raff_project`, `raff_vm`, `raff_vpc`, `raff_ip`, `raff_security_group`) and singular + plural data sources for each. See [internal/provider/](internal/provider/) for the full schema until the Registry docs are live.
 
 ## Developing the Provider
 
