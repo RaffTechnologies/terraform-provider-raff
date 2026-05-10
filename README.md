@@ -2,9 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Terraform provider for [Raff Cloud](https://rafftechnologies.com), built on [raff-go](https://github.com/RaffTechnologies/raff-go).
+Terraform provider for [Raff](https://rafftechnologies.com), built on [raff-go](https://github.com/RaffTechnologies/raff-go).
 
-> **v0.1.0 — first public release.** 14 resources, 25 data sources covering the full Raff public API: compute (VMs, volumes, snapshots, backups, backup schedules), networking (VPCs, IPs, security groups), identity (projects, members, roles, API keys, SSH keys), and read-only catalogs (regions, templates, pricing). Built on [raff-go v0.3.2](https://github.com/RaffTechnologies/raff-go).
+> **14 resources, 25 data sources** covering the full Raff public API: compute (VMs, volumes, snapshots, backups, backup schedules), networking (VPCs, IPs, security groups), identity (projects, members, roles, API keys, SSH keys), and read-only catalogs (regions, templates, pricing). Built on [raff-go](https://github.com/RaffTechnologies/raff-go).
 
 ## Requirements
 
