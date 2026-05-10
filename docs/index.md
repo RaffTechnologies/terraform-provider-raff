@@ -34,9 +34,11 @@ provider "raff" {
   # project_id can be omitted if RAFF_PROJECT_ID is set
 }
 
-# Look up an Ubuntu template instead of hard-coding a UUID
-data "raff_templates" "ubuntu" {
-  category = "linux"
+# Look up OS templates instead of hard-coding a UUID. `category` accepts
+# `os` (Linux/Windows) or `marketplace` (pre-baked apps). To filter by OS
+# family (e.g. linux), match on the `os_type` response field.
+data "raff_templates" "os" {
+  category = "os"
   vm_type  = "standard"
 }
 
@@ -79,7 +81,7 @@ resource "raff_security_group" "web" {
 
 resource "raff_vm" "web" {
   name        = "web-01"
-  template_id = data.raff_templates.ubuntu.templates[0].id
+  template_id = [for t in data.raff_templates.os.templates : t.id if t.name == "Ubuntu" && t.os_type == "linux"][0]
   pricing_id  = 9 # standard 2 vCPU / 4 GB / 50 GB at $4.99/mo — see data.raff_vm_pricing.standard_us
   region      = "us-east"
 }

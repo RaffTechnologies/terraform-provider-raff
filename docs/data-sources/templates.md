@@ -17,7 +17,7 @@ Lists OS templates available for VM creation. Mirrors the digitalocean_images da
 
 ### Optional
 
-- `category` (String) Filter: linux, windows, app, etc.
+- `category` (String) Filter by template category. One of: `os` (Linux/Windows OS templates), `marketplace` (pre-baked apps). To filter by OS family (e.g. Linux only), match on the `os_type` response field with a `for` expression — there is no API-level filter for that today.
 - `region` (String) Filter by region.
 - `vm_type` (String) Filter: standard or premium.
 

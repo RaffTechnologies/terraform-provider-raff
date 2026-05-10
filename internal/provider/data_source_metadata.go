@@ -65,7 +65,7 @@ func dataSourceTemplates() *schema.Resource {
 			"category": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Filter: linux, windows, app, etc.",
+				Description: "Filter by template category. One of: `os` (Linux/Windows OS templates), `marketplace` (pre-baked apps). To filter by OS family (e.g. Linux only), match on the `os_type` response field with a `for` expression — there is no API-level filter for that today.",
 			},
 			"vm_type": {
 				Type:        schema.TypeString,

@@ -63,8 +63,8 @@ resource "raff_ssh_key" "laptop" {
   public_key = file("~/.ssh/id_ed25519.pub")
 }
 
-data "raff_templates" "ubuntu" {
-  category = "linux"
+data "raff_templates" "os" {
+  category = "os"          # 'os' (Linux/Windows) or 'marketplace' (pre-baked apps)
   vm_type  = "standard"
 }
 
@@ -75,7 +75,7 @@ data "raff_vm_pricing" "standard_us" {
 
 resource "raff_vm" "web" {
   name        = "web-01"
-  template_id = data.raff_templates.ubuntu.templates[0].id
+  template_id = [for t in data.raff_templates.os.templates : t.id if t.name == "Ubuntu" && t.os_type == "linux"][0]
   pricing_id  = 9   # standard 2vCPU/4GB/50GB ($4.99/mo) — see data.raff_vm_pricing.standard_us
   region      = "us-east"
 }
