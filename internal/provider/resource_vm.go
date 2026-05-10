@@ -2,9 +2,12 @@ package provider
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	raff "github.com/rafftechnologies/raff-go"
 	"github.com/rafftechnologies/raff-go/spec"
@@ -17,6 +20,16 @@ func resourceVM() *schema.Resource {
 		ReadContext:   resourceVMRead,
 		UpdateContext: resourceVMUpdate,
 		DeleteContext: resourceVMDelete,
+
+		// VM creation is async — `terraform apply` would otherwise return as
+		// soon as the API accepts the request, before the VM has booted and
+		// before public/private IPs are populated. Customers expect computed
+		// IP outputs to be set on first apply, so block in Create until the VM
+		// reaches `active`. Customers can extend the timeout for larger plans.
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(15 * time.Minute),
+			Delete: schema.DefaultTimeout(10 * time.Minute),
+		},
 
 		Schema: map[string]*schema.Schema{
 			// Required input
@@ -122,7 +135,7 @@ func resourceVM() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "detach",
-				Description: "What to do with attached volumes when the VM is destroyed: `detach` (keeps volumes, still billable) or `delete` (removes them permanently). Defaults to `detach`.",
+				Description: "What to do at VM destroy with **volumes that are NOT under Terraform management** (e.g. attached out-of-band via the dashboard or CLI). `detach` keeps them (still billable, can be re-attached); `delete` removes them permanently. Defaults to `detach`. **Note:** volumes managed by a `raff_volume` resource in your Terraform config are destroyed independently by Terraform regardless of this setting — control their lifecycle through the resource block instead.",
 			},
 			"delete_vpc": {
 				Type:        schema.TypeBool,
@@ -296,7 +309,54 @@ func resourceVMCreate(ctx context.Context, d *schema.ResourceData, meta any) dia
 
 	d.SetId(vm.ID.String())
 
-	return setVMState(d, vm)
+	// Block until the VM reaches `active` so computed attributes (IPs,
+	// status) are accurate on the first apply. Without this, customers see
+	// empty `public_ipv4` outputs immediately after `terraform apply` and
+	// have to run `terraform refresh` to populate them.
+	finalVM, err := waitForVMActive(ctx, client, vm.ID.String(), d.Timeout(schema.TimeoutCreate))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
+	return setVMState(d, finalVM)
+}
+
+// waitForVMActive polls until the VM is in the `active` state or fails.
+// Lifecycle: initiating → provisioning → booting → active.
+// `failure` is treated as a hard error; the partially-created VM stays in
+// state so the customer can `terraform destroy` to clean up.
+func waitForVMActive(ctx context.Context, client *raff.Client, vmID string, timeout time.Duration) (*raff.VM, error) {
+	conf := &retry.StateChangeConf{
+		Pending: []string{
+			string(spec.VMStatusInitiating),
+			string(spec.VMStatusProvisioning),
+			string(spec.VMStatusBooting),
+		},
+		Target:     []string{string(spec.VMStatusActive)},
+		Timeout:    timeout,
+		Delay:      5 * time.Second,
+		MinTimeout: 5 * time.Second,
+		Refresh: func() (any, string, error) {
+			vm, _, err := client.VMs.Get(ctx, vmID)
+			if err != nil {
+				return nil, "", err
+			}
+			status := string(vm.Status)
+			if status == string(spec.VMStatusFailure) {
+				return vm, status, fmt.Errorf("VM %s entered failure state during provisioning", vmID)
+			}
+			return vm, status, nil
+		},
+	}
+	out, err := conf.WaitForStateContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	vm, ok := out.(*raff.VM)
+	if !ok {
+		return nil, fmt.Errorf("unexpected refresh result type %T", out)
+	}
+	return vm, nil
 }
 
 func resourceVMRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {

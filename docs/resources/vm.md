@@ -34,7 +34,8 @@ Manages a Raff virtual machine.
 - `skip_vpc` (Boolean) Create the VM with only a public IP — no VPC at all. Mutually exclusive with `vpc_id`/`vpc_name`/`vpc_cidr`. Cannot be combined with a VM configured to skip the public IP (the VM would have no network).
 - `ssh_keys` (List of String) SSH key IDs.
 - `tags` (List of String) Tag names. Updatable: tags are diffed against current state — additions are added, removals are removed.
-- `volume_action` (String) What to do with attached volumes when the VM is destroyed: `detach` (keeps volumes, still billable) or `delete` (removes them permanently). Defaults to `detach`.
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `volume_action` (String) What to do at VM destroy with **volumes that are NOT under Terraform management** (e.g. attached out-of-band via the dashboard or CLI). `detach` keeps them (still billable, can be re-attached); `delete` removes them permanently. Defaults to `detach`. **Note:** volumes managed by a `raff_volume` resource in your Terraform config are destroyed independently by Terraform regardless of this setting — control their lifecycle through the resource block instead.
 - `vpc_cidr` (String) CIDR block for the VPC created via `vpc_name`, e.g. `10.0.0.0/24`. Required when `vpc_name` is set.
 - `vpc_id` (String) Attach the VM to this existing VPC. Mutually exclusive with `vpc_name`/`vpc_cidr`. If neither is set, a VPC is auto-created (named `vpc-<vm-name>-<short hash>`) and torn down with the last VM that uses it.
 - `vpc_name` (String) Create a new VPC with this name and attach the VM to it. Requires `vpc_cidr`. Mutually exclusive with `vpc_id`.
@@ -59,3 +60,11 @@ Manages a Raff virtual machine.
 - `template_version` (String) OS template version.
 - `total_storage` (Number) Total storage in GB.
 - `updated_at` (String) Last update timestamp.
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String)
+- `delete` (String)
