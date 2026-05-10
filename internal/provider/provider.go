@@ -62,10 +62,12 @@ func New() *schema.Provider {
 			"raff_vm_networks":     dataSourceVMNetworks(),
 			"raff_vpc":             dataSourceVPC(),
 			"raff_vpcs":            dataSourceVPCs(),
+			"raff_vpc_cidr_suggestions": dataSourceVPCCIDRSuggestions(),
 			"raff_ip":              dataSourceIP(),
 			"raff_ips":             dataSourceIPs(),
 			"raff_security_group":  dataSourceSecurityGroup(),
 			"raff_security_groups": dataSourceSecurityGroups(),
+			"raff_security_group_templates": dataSourceSecurityGroupTemplates(),
 			// Wave 1
 			"raff_ssh_key":          dataSourceSSHKey(),
 			"raff_ssh_keys":         dataSourceSSHKeys(),
@@ -88,6 +90,7 @@ func New() *schema.Provider {
 			// Read-only catalog (no resource counterpart)
 			"raff_regions":          dataSourceRegions(),
 			"raff_templates":        dataSourceTemplates(),
+			"raff_permissions":      dataSourcePermissions(),
 			"raff_vm_pricing":       dataSourceVMPricing(),
 			"raff_volume_pricing":   dataSourceStoragePricing("volume"),
 			"raff_backup_pricing":   dataSourceStoragePricing("backup"),
