@@ -4,7 +4,7 @@
 
 Terraform provider for [Raff Cloud](https://rafftechnologies.com), built on [raff-go](https://github.com/RaffTechnologies/raff-go).
 
-> **v0.1.0 — first public release.** 13 resources, 23 data sources covering the full Raff public API: compute (VMs, volumes, snapshots, backup schedules), networking (VPCs, IPs, security groups), identity (projects, members, roles, API keys, SSH keys), and read-only catalogs (regions, templates, pricing). Built on [raff-go v0.3.2](https://github.com/RaffTechnologies/raff-go).
+> **v0.1.0 — first public release.** 14 resources, 25 data sources covering the full Raff public API: compute (VMs, volumes, snapshots, backups, backup schedules), networking (VPCs, IPs, security groups), identity (projects, members, roles, API keys, SSH keys), and read-only catalogs (regions, templates, pricing). Built on [raff-go v0.3.2](https://github.com/RaffTechnologies/raff-go).
 
 ## Requirements
 
@@ -96,7 +96,7 @@ resource "raff_backup_schedule" "nightly" {
 
 ## Resources & Data Sources
 
-**13 resources, 23 data sources.** Full inventory:
+**14 resources, 25 data sources.** Full inventory:
 
 ### Resources
 
@@ -105,7 +105,8 @@ resource "raff_backup_schedule" "nightly" {
 | Compute | `raff_vm` | VM lifecycle |
 | Compute | `raff_volume` | Block storage volume + attachment |
 | Compute | `raff_snapshot` | VM-disk or volume snapshot |
-| Compute | `raff_backup_schedule` | Recurring backup policy |
+| Compute | `raff_backup` | One-shot VM backup. ForceNew on every field — backups are immutable once captured. |
+| Compute | `raff_backup_schedule` | Recurring backup policy. Manages its own retention; don't manage backups it creates via `raff_backup`. |
 | Networking | `raff_vpc` | Virtual private cloud |
 | Networking | `raff_ip` | Reserved floating IP |
 | Networking | `raff_security_group` | Firewall ruleset |
@@ -132,8 +133,12 @@ Singular (`raff_<name>` by ID) and plural (`raff_<name>s` for listing) for every
 
 ### Not exposed (intentional)
 
-- **One-shot backups** — single on-demand backup is imperative; use `raff_backup_schedule` for declarative or `raff backup create` (CLI) for one-offs. Once a backup exists, it's owned by the schedule that created it.
 - **Invitations** — transient by nature (accepted/cancelled means it's gone). Terraform managing "this invitation should exist" loops. Use `raff_member { email = ... }` for the equivalent declarative shape — the underlying invitation is auto-created and cleaned up.
+
+### When to use `raff_backup` vs `raff_backup_schedule`
+
+- **`raff_backup`** — for capturing a single backup before a known event (a deployment, a manual checkpoint). The backup is owned by the Terraform config that created it; removing the resource block deletes the backup.
+- **`raff_backup_schedule`** — for ongoing protection. The schedule manages its own retention (`keep_count`); auto-pruned backups don't appear in any TF state. **Don't** also manage schedule-created backups via `raff_backup` — you'll fight the retention engine.
 
 ## Developing the Provider
 

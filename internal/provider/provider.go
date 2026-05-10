@@ -44,6 +44,7 @@ func New() *schema.Provider {
 			"raff_ssh_key":         resourceSSHKey(),
 			"raff_volume":          resourceVolume(),
 			"raff_snapshot":        resourceSnapshot(),
+			"raff_backup":          resourceBackup(),
 			"raff_backup_schedule": resourceBackupSchedule(),
 			// Wave 2 — Identity / RBAC
 			"raff_api_key":        resourceAPIKey(),
@@ -71,6 +72,8 @@ func New() *schema.Provider {
 			"raff_volumes":          dataSourceVolumes(),
 			"raff_snapshot":         dataSourceSnapshot(),
 			"raff_snapshots":        dataSourceSnapshots(),
+			"raff_backup":           dataSourceBackup(),
+			"raff_backups":          dataSourceBackups(),
 			"raff_backup_schedule":  dataSourceBackupSchedule(),
 			"raff_backup_schedules": dataSourceBackupSchedules(),
 			// Wave 2
