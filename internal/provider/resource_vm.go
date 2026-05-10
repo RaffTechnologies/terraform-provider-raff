@@ -97,31 +97,31 @@ func resourceVM() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "VPC ID to attach.",
+				Description: "Attach the VM to this existing VPC. Mutually exclusive with `vpc_name`/`vpc_cidr`. If neither is set, a VPC is auto-created (named `vpc-<vm-name>-<short hash>`) and torn down with the last VM that uses it.",
 			},
 			"vpc_name": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "VPC name (creates new VPC).",
+				Description: "Create a new VPC with this name and attach the VM to it. Requires `vpc_cidr`. Mutually exclusive with `vpc_id`.",
 			},
 			"vpc_cidr": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				ForceNew:    true,
-				Description: "VPC CIDR block.",
+				Description: "CIDR block for the VPC created via `vpc_name`, e.g. `10.0.0.0/24`. Required when `vpc_name` is set.",
 			},
 			"volume_action": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Default:     "detach",
-				Description: "Volume action on delete: detach or delete.",
+				Description: "What to do with attached volumes when the VM is destroyed: `detach` (keeps volumes, still billable) or `delete` (removes them permanently). Defaults to `detach`.",
 			},
 			"delete_vpc": {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     true,
-				Description: "Whether to delete VPC on VM deletion.",
+				Description: "Delete the attached VPC when the VM is destroyed. Defaults to `true`. Auto-skipped if other VMs still use the VPC.",
 			},
 			// Computed (read-only)
 			"status": {

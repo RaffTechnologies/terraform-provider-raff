@@ -1,0 +1,128 @@
+---
+page_title: "Raff Provider"
+description: |-
+  Provision and manage Raff infrastructure with Terraform — VMs, volumes, snapshots, backups, networking, and IAM.
+---
+
+# Raff Provider
+
+Use the Raff provider to provision and manage your [Raff](https://rafftechnologies.com) infrastructure with Terraform.
+
+Spin up virtual machines from a sizing catalog with transparent monthly pricing, attach block storage volumes, capture snapshots or schedule recurring backups, isolate workloads in VPCs with floating IPs and security groups, and manage projects, roles, members, API keys, and SSH keys — all from a single config.
+
+## Authentication
+
+Generate an API key in the dashboard at [rafftechnologies.com](https://rafftechnologies.com) under **Team & Projects → API Keys**, then either:
+
+- pass it as `api_key` in the provider block, or
+- set `RAFF_API_KEY` in the environment (recommended — keeps secrets out of `.tf` files).
+
+## Example Usage
+
+```hcl
+terraform {
+  required_providers {
+    raff = {
+      source  = "rafftechnologies/raff"
+      version = "~> 0.1"
+    }
+  }
+}
+
+provider "raff" {
+  # api_key    can be omitted if RAFF_API_KEY is set
+  # project_id can be omitted if RAFF_PROJECT_ID is set
+}
+
+# Look up an Ubuntu template instead of hard-coding a UUID
+data "raff_templates" "ubuntu" {
+  category = "linux"
+  vm_type  = "standard"
+}
+
+# Browse the standard VM plan catalog
+data "raff_vm_pricing" "standard_us" {
+  region  = "us-east"
+  vm_type = "standard"
+}
+
+resource "raff_ssh_key" "laptop" {
+  name       = "laptop"
+  public_key = file("~/.ssh/id_ed25519.pub")
+}
+
+resource "raff_vpc" "prod" {
+  name   = "prod-net"
+  cidr   = "10.0.0.0/20"
+  region = "us-east"
+}
+
+resource "raff_security_group" "web" {
+  name        = "web"
+  description = "Public web tier"
+
+  rule {
+    rule_type = "inbound"
+    protocol  = "TCP"
+    range     = "80,443"
+  }
+  rule {
+    rule_type = "inbound"
+    protocol  = "TCP"
+    range     = "22"
+  }
+  rule {
+    rule_type = "outbound"
+    protocol  = "ALL"
+  }
+}
+
+resource "raff_vm" "web" {
+  name        = "web-01"
+  template_id = data.raff_templates.ubuntu.templates[0].id
+  pricing_id  = 9 # standard 2 vCPU / 4 GB / 50 GB at $4.99/mo — see data.raff_vm_pricing.standard_us
+  region      = "us-east"
+}
+
+resource "raff_volume" "data" {
+  name        = "data-vol"
+  size        = 100
+  volume_type = "nvme"
+  region      = "us-east"
+  vm_id       = raff_vm.web.id
+}
+
+resource "raff_backup_schedule" "nightly" {
+  vm_id      = raff_vm.web.id
+  frequency  = "daily"
+  time       = "03:00"
+  keep_count = 14
+}
+```
+
+## Resources
+
+The provider exposes 14 resources spanning compute, networking, and identity. Browse the **Documentation** sidebar (left) for the full schema of each.
+
+**Compute & storage:** `raff_vm`, `raff_volume`, `raff_snapshot`, `raff_backup`, `raff_backup_schedule`, `raff_ssh_key`
+
+**Networking:** `raff_vpc`, `raff_ip`, `raff_security_group`
+
+**Identity & access:** `raff_project`, `raff_project_member`, `raff_member`, `raff_role`, `raff_api_key`
+
+## Data Sources
+
+Singular and plural data sources for every resource above, plus read-only catalog lookups:
+
+- `raff_regions` — datacenter regions
+- `raff_templates` — OS templates with category / vm_type / region filters
+- `raff_vm_pricing` — sizing catalog with `pricing_id` to use in `raff_vm`
+- `raff_volume_pricing`, `raff_backup_pricing`, `raff_snapshot_pricing` — per-GB storage rates
+- `raff_ip_pricing` — floating IP rates by family
+
+## Related projects
+
+- [raff-go](https://github.com/RaffTechnologies/raff-go) — official Go SDK that powers this provider
+- [raff-cli](https://github.com/RaffTechnologies/raff-cli) — official command-line interface
+
+{{ .SchemaMarkdown | trimspace }}
