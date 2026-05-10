@@ -19,7 +19,7 @@ Manages a Raff block storage volume.
 
 - `name` (String) Volume display name.
 - `size` (Number) Size in GB. Updates trigger an in-place resize (must be larger than current).
-- `volume_type` (String) Storage class (e.g. standard).
+- `volume_type` (String) Storage class. One of: `nvme`.
 
 ### Optional
 

@@ -33,7 +33,7 @@ func resourceVolume() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Storage class (e.g. standard).",
+				Description: "Storage class. One of: `nvme`.",
 			},
 			"region": {
 				Type:        schema.TypeString,

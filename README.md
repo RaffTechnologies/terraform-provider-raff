@@ -81,7 +81,7 @@ resource "raff_vm" "web" {
 resource "raff_volume" "data" {
   name        = "data-vol"
   size        = 100
-  volume_type = "standard"
+  volume_type = "nvme"
   region      = "us-east"
   vm_id       = raff_vm.web.id
 }
