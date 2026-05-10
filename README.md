@@ -6,7 +6,7 @@ Terraform provider for [Raff](https://rafftechnologies.com), built on [raff-go](
 
 > **14 resources, 29 data sources** covering the full Raff public API: compute (VMs, volumes, snapshots, backups, backup schedules), networking (VPCs, IPs, security groups), identity (projects, members, roles, API keys, SSH keys), and read-only catalogs (regions, templates, pricing, plus VPC CIDR suggestions, security-group templates, and the permission catalog). Built on [raff-go](https://github.com/RaffTechnologies/raff-go).
 
-> **What's new in v0.1.9** — Four new data sources (`raff_vm_networks` with MAC, `raff_vpc_cidr_suggestions`, `raff_security_group_templates`, `raff_permissions`) plus `skip_vpc` on `raff_vm` and rewritten VPC field descriptions. The `pricing_id` requirement on `raff_volume` is gone (auto-derived from `volume_type` + `region` server-side). Full details in the [API changelog](https://docs.rafftechnologies.com/api-reference/changelog).
+> **What's new in v0.1.10** — Fixed `data.raff_templates` `category` description and example: real values are `os` / `marketplace`, not `linux` / `windows`. v0.1.9 added four data sources (`raff_vm_networks` with MAC, `raff_vpc_cidr_suggestions`, `raff_security_group_templates`, `raff_permissions`); v0.1.7 added `skip_vpc` on `raff_vm`. The `pricing_id` requirement on `raff_volume` is gone (auto-derived from `volume_type` + `region` server-side). Full details in the [API changelog](https://docs.rafftechnologies.com/api-reference/changelog).
 
 ## Requirements
 
