@@ -1,7 +1,14 @@
-.PHONY: build test vet lint sync clean
+.PHONY: build test vet lint sync docs clean
 
 build:
 	go build ./...
+
+# Regenerate Registry docs from schema, then apply sidebar subcategories.
+# tfplugindocs emits subcategory: "" by default — the script fills it in
+# so the Registry groups resources by product area (VMs, Volumes, etc.).
+docs:
+	go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate
+	./scripts/set-doc-subcategories.sh
 
 test:
 	go test ./...
