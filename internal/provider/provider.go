@@ -59,6 +59,7 @@ func New() *schema.Provider {
 			"raff_projects":        dataSourceProjects(),
 			"raff_vm":              dataSourceVM(),
 			"raff_vms":             dataSourceVMs(),
+			"raff_vm_networks":     dataSourceVMNetworks(),
 			"raff_vpc":             dataSourceVPC(),
 			"raff_vpcs":            dataSourceVPCs(),
 			"raff_ip":              dataSourceIP(),
