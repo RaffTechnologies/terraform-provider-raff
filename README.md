@@ -4,7 +4,9 @@
 
 Terraform provider for [Raff](https://rafftechnologies.com), built on [raff-go](https://github.com/RaffTechnologies/raff-go).
 
-> **14 resources, 25 data sources** covering the full Raff public API: compute (VMs, volumes, snapshots, backups, backup schedules), networking (VPCs, IPs, security groups), identity (projects, members, roles, API keys, SSH keys), and read-only catalogs (regions, templates, pricing). Built on [raff-go](https://github.com/RaffTechnologies/raff-go).
+> **14 resources, 29 data sources** covering the full Raff public API: compute (VMs, volumes, snapshots, backups, backup schedules), networking (VPCs, IPs, security groups), identity (projects, members, roles, API keys, SSH keys), and read-only catalogs (regions, templates, pricing, plus VPC CIDR suggestions, security-group templates, and the permission catalog). Built on [raff-go](https://github.com/RaffTechnologies/raff-go).
+
+> **What's new in v0.1.9** — Four new data sources (`raff_vm_networks` with MAC, `raff_vpc_cidr_suggestions`, `raff_security_group_templates`, `raff_permissions`) plus `skip_vpc` on `raff_vm` and rewritten VPC field descriptions. The `pricing_id` requirement on `raff_volume` is gone (auto-derived from `volume_type` + `region` server-side). Full details in the [API changelog](https://docs.rafftechnologies.com/api-reference/changelog).
 
 ## Requirements
 
@@ -39,7 +41,7 @@ provider_installation {
 
 ## Using the provider
 
-Once the first release is published to the Terraform Registry, declare the provider in your config and run `terraform init`:
+Declare the provider in your config and run `terraform init`:
 
 ```hcl
 terraform {
@@ -96,7 +98,7 @@ resource "raff_backup_schedule" "nightly" {
 
 ## Resources & Data Sources
 
-**14 resources, 25 data sources.** Full inventory:
+**14 resources, 29 data sources.** Full inventory:
 
 ### Resources
 
@@ -130,6 +132,10 @@ Singular (`raff_<name>` by ID) and plural (`raff_<name>s` for listing) for every
 | `raff_backup_pricing` | Per-GB backup storage rate |
 | `raff_snapshot_pricing` | Per-GB snapshot storage rate |
 | `raff_ip_pricing` | Floating IP rates by family (ipv4 / ipv6) |
+| `raff_vm_networks` | NICs attached to a VM (with MAC, IP, gateway, security-group binding) |
+| `raff_vpc_cidr_suggestions` | Non-overlapping CIDR for declarative VPC sizing |
+| `raff_security_group_templates` | Built-in security-group templates (use as `template_id`) |
+| `raff_permissions` | Read-only permission catalog for declarative role construction |
 
 ### Not exposed (intentional)
 
