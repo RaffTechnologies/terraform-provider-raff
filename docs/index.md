@@ -1,14 +1,14 @@
 ---
-page_title: "Raff Cloud Provider"
+page_title: "Raff Provider"
 description: |-
-  Provision Raff Cloud infrastructure with Terraform — VMs, volumes, snapshots, backups, networking, SSH keys, API keys, and IAM.
+  Provision and manage Raff infrastructure with Terraform — VMs, volumes, snapshots, backups, networking, and IAM.
 ---
 
-# Raff Cloud Provider
+# Raff Provider
 
-The Raff provider lets you manage [Raff Cloud](https://rafftechnologies.com) infrastructure declaratively with Terraform: VMs, block storage volumes, snapshots, backups (one-shot and scheduled), VPCs, floating IPs, security groups, projects, IAM roles and members, API keys, and SSH keys.
+Use the Raff provider to provision and manage your [Raff](https://rafftechnologies.com) infrastructure with Terraform.
 
-The provider is built on top of [raff-go](https://github.com/RaffTechnologies/raff-go), the official Go SDK, which is auto-synced with the public OpenAPI spec.
+Spin up virtual machines from a sizing catalog with transparent monthly pricing, attach block storage volumes, capture snapshots or schedule recurring backups, isolate workloads in VPCs with floating IPs and security groups, and manage projects, roles, members, API keys, and SSH keys — all from a single config.
 
 ## Authentication
 
