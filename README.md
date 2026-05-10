@@ -4,7 +4,7 @@
 
 Terraform provider for [Raff Cloud](https://rafftechnologies.com), built on [raff-go](https://github.com/RaffTechnologies/raff-go).
 
-> **Pre-release:** the provider has not yet been published to the Terraform Registry. To use it today, build locally and add a `dev_overrides` block (see [Building The Provider](#building-the-provider) below). Once the first signed release is published, the [Registry listing](https://registry.terraform.io/providers/rafftechnologies/raff/latest/docs) will be the canonical source.
+> **v0.1.0 — first public release.** 13 resources, 23 data sources covering the full Raff public API: compute (VMs, volumes, snapshots, backup schedules), networking (VPCs, IPs, security groups), identity (projects, members, roles, API keys, SSH keys), and read-only catalogs (regions, templates, pricing). Built on [raff-go v0.3.2](https://github.com/RaffTechnologies/raff-go).
 
 ## Requirements
 
@@ -56,16 +56,84 @@ provider "raff" {
   project_id = var.raff_project_id    # or RAFF_PROJECT_ID env var
 }
 
+resource "raff_ssh_key" "laptop" {
+  name       = "laptop"
+  public_key = file("~/.ssh/id_ed25519.pub")
+}
+
+data "raff_templates" "ubuntu" {
+  category = "linux"
+  vm_type  = "standard"
+}
+
+data "raff_vm_pricing" "standard_us" {
+  region  = "us-east"
+  vm_type = "standard"
+}
+
 resource "raff_vm" "web" {
   name        = "web-01"
-  template_id = "5ac21891-32e6-41ce-8a93-b5d6ab708b0d"
-  pricing_id  = 3
+  template_id = data.raff_templates.ubuntu.templates[0].id
+  pricing_id  = 9   # standard 2vCPU/4GB/50GB ($4.99/mo) — see data.raff_vm_pricing.standard_us
   region      = "us-east"
-  ssh_keys    = ["ssh-ed25519 AAAA... user@host"]
+}
+
+resource "raff_volume" "data" {
+  name        = "data-vol"
+  size        = 100
+  volume_type = "standard"
+  region      = "us-east"
+  vm_id       = raff_vm.web.id
+}
+
+resource "raff_backup_schedule" "nightly" {
+  vm_id      = raff_vm.web.id
+  frequency  = "daily"
+  time       = "03:00"
+  keep_count = 14
 }
 ```
 
-The provider supports five resources (`raff_project`, `raff_vm`, `raff_vpc`, `raff_ip`, `raff_security_group`) and singular + plural data sources for each. See [internal/provider/](internal/provider/) for the full schema until the Registry docs are live.
+## Resources & Data Sources
+
+**13 resources, 23 data sources.** Full inventory:
+
+### Resources
+
+| Category | Resource | Notes |
+|---|---|---|
+| Compute | `raff_vm` | VM lifecycle |
+| Compute | `raff_volume` | Block storage volume + attachment |
+| Compute | `raff_snapshot` | VM-disk or volume snapshot |
+| Compute | `raff_backup_schedule` | Recurring backup policy |
+| Networking | `raff_vpc` | Virtual private cloud |
+| Networking | `raff_ip` | Reserved floating IP |
+| Networking | `raff_security_group` | Firewall ruleset |
+| Identity | `raff_project` | Project |
+| Identity | `raff_project_member` | User/API-key in a project |
+| Identity | `raff_member` | Account-level membership / invite |
+| Identity | `raff_role` | Custom IAM role |
+| Identity | `raff_api_key` | API key (secret stored in tfstate — lock it down) |
+| Identity | `raff_ssh_key` | SSH public key |
+
+### Data sources
+
+Singular (`raff_<name>` by ID) and plural (`raff_<name>s` for listing) for every resource above (where the API exposes both), **plus** read-only catalog lookups with no resource counterpart:
+
+| Data source | Purpose |
+|---|---|
+| `raff_regions` | Available datacenter regions |
+| `raff_templates` | OS templates (filter: category, vm_type, region) |
+| `raff_vm_pricing` | VM size catalog with `pricing_id` to use in `raff_vm` |
+| `raff_volume_pricing` | Per-GB volume storage rate |
+| `raff_backup_pricing` | Per-GB backup storage rate |
+| `raff_snapshot_pricing` | Per-GB snapshot storage rate |
+| `raff_ip_pricing` | Floating IP rates by family (ipv4 / ipv6) |
+
+### Not exposed (intentional)
+
+- **One-shot backups** — single on-demand backup is imperative; use `raff_backup_schedule` for declarative or `raff backup create` (CLI) for one-offs. Once a backup exists, it's owned by the schedule that created it.
+- **Invitations** — transient by nature (accepted/cancelled means it's gone). Terraform managing "this invitation should exist" loops. Use `raff_member { email = ... }` for the equivalent declarative shape — the underlying invitation is auto-created and cleaned up.
 
 ## Developing the Provider
 

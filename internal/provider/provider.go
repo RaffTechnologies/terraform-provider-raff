@@ -34,14 +34,26 @@ func New() *schema.Provider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
+			// Existing
 			"raff_project":        resourceProject(),
 			"raff_vm":             resourceVM(),
 			"raff_vpc":            resourceVPC(),
 			"raff_ip":             resourceIP(),
 			"raff_security_group": resourceSecurityGroup(),
+			// Wave 1 — VM-adjacent storage
+			"raff_ssh_key":         resourceSSHKey(),
+			"raff_volume":          resourceVolume(),
+			"raff_snapshot":        resourceSnapshot(),
+			"raff_backup_schedule": resourceBackupSchedule(),
+			// Wave 2 — Identity / RBAC
+			"raff_api_key":        resourceAPIKey(),
+			"raff_role":           resourceRole(),
+			"raff_member":         resourceMember(),
+			"raff_project_member": resourceProjectMember(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
+			// Existing
 			"raff_project":         dataSourceProject(),
 			"raff_projects":        dataSourceProjects(),
 			"raff_vm":              dataSourceVM(),
@@ -52,6 +64,31 @@ func New() *schema.Provider {
 			"raff_ips":             dataSourceIPs(),
 			"raff_security_group":  dataSourceSecurityGroup(),
 			"raff_security_groups": dataSourceSecurityGroups(),
+			// Wave 1
+			"raff_ssh_key":          dataSourceSSHKey(),
+			"raff_ssh_keys":         dataSourceSSHKeys(),
+			"raff_volume":           dataSourceVolume(),
+			"raff_volumes":          dataSourceVolumes(),
+			"raff_snapshot":         dataSourceSnapshot(),
+			"raff_snapshots":        dataSourceSnapshots(),
+			"raff_backup_schedule":  dataSourceBackupSchedule(),
+			"raff_backup_schedules": dataSourceBackupSchedules(),
+			// Wave 2
+			"raff_api_key":         dataSourceAPIKey(),
+			"raff_api_keys":        dataSourceAPIKeys(),
+			"raff_role":            dataSourceRole(),
+			"raff_roles":           dataSourceRoles(),
+			"raff_member":          dataSourceMember(),
+			"raff_members":         dataSourceMembers(),
+			"raff_project_members": dataSourceProjectMembers(),
+			// Read-only catalog (no resource counterpart)
+			"raff_regions":          dataSourceRegions(),
+			"raff_templates":        dataSourceTemplates(),
+			"raff_vm_pricing":       dataSourceVMPricing(),
+			"raff_volume_pricing":   dataSourceStoragePricing("volume"),
+			"raff_backup_pricing":   dataSourceStoragePricing("backup"),
+			"raff_snapshot_pricing": dataSourceStoragePricing("snapshot"),
+			"raff_ip_pricing":       dataSourceIPPricing(),
 		},
 
 		ConfigureContextFunc: configure,
