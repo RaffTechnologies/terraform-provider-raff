@@ -31,6 +31,7 @@ Manages a Raff virtual machine.
 - `extra_storage` (Number) Extra block storage in GB.
 - `extra_storage_type` (String) Extra storage filesystem type (ext4, xfs, btrfs).
 - `password` (String, Sensitive) Root password.
+- `skip_vpc` (Boolean) Create the VM with only a public IP — no VPC at all. Mutually exclusive with `vpc_id`/`vpc_name`/`vpc_cidr`. Cannot be combined with a VM configured to skip the public IP (the VM would have no network).
 - `ssh_keys` (List of String) SSH key IDs.
 - `tags` (List of String) Tag names. Updatable: tags are diffed against current state — additions are added, removals are removed.
 - `volume_action` (String) What to do with attached volumes when the VM is destroyed: `detach` (keeps volumes, still billable) or `delete` (removes them permanently). Defaults to `detach`.

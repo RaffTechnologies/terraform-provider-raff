@@ -111,6 +111,13 @@ func resourceVM() *schema.Resource {
 				ForceNew:    true,
 				Description: "CIDR block for the VPC created via `vpc_name`, e.g. `10.0.0.0/24`. Required when `vpc_name` is set.",
 			},
+			"skip_vpc": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				ForceNew:    true,
+				Default:     false,
+				Description: "Create the VM with only a public IP — no VPC at all. Mutually exclusive with `vpc_id`/`vpc_name`/`vpc_cidr`. Cannot be combined with a VM configured to skip the public IP (the VM would have no network).",
+			},
 			"volume_action": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -274,6 +281,12 @@ func resourceVMCreate(ctx context.Context, d *schema.ResourceData, meta any) dia
 	}
 	if v, ok := d.GetOk("vpc_cidr"); ok {
 		req.VpcCidr = raff.String(v.(string))
+	}
+	if d.Get("skip_vpc").(bool) {
+		if req.VpcID != nil || req.VpcName != nil || req.VpcCidr != nil {
+			return diag.Errorf("skip_vpc cannot be combined with vpc_id / vpc_name / vpc_cidr")
+		}
+		req.SkipVpc = raff.Bool(true)
 	}
 
 	vm, _, err := client.VMs.Create(ctx, req)
