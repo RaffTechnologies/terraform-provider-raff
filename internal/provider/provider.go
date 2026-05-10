@@ -102,7 +102,7 @@ func configure(ctx context.Context, d *schema.ResourceData) (any, diag.Diagnosti
 	apiKey := d.Get("api_key").(string)
 
 	opts := []raff.ClientOpt{
-		raff.SetUserAgent("terraform-provider-raff/0.1.0"),
+		raff.SetUserAgent("terraform-provider-raff/0.1.1"),
 	}
 
 	if v, ok := d.GetOk("api_url"); ok {
