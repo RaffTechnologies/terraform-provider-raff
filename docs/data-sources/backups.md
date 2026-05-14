@@ -33,6 +33,7 @@ Read-Only:
 - `created_at` (String)
 - `expire_date` (String)
 - `id` (String)
+- `increment_id` (Number)
 - `name` (String)
 - `project_id` (String)
 - `region` (String)

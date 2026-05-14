@@ -16,6 +16,11 @@ func backupComputedSchema() map[string]*schema.Schema {
 		"vm_id":        {Type: schema.TypeString, Computed: true},
 		"status":       {Type: schema.TypeString, Computed: true},
 		"storage_size": {Type: schema.TypeInt, Computed: true},
+		// Position within the incremental backup series. Null for legacy
+		// standalone rows, 0 for the series baseline, 1+ for appended
+		// restore points. Rows sharing a series are linked and delete
+		// together — see resource_backup destruction notes.
+		"increment_id": {Type: schema.TypeInt, Computed: true},
 		"region":       {Type: schema.TypeString, Computed: true},
 		"expire_date":  {Type: schema.TypeString, Computed: true},
 		"account_id":   {Type: schema.TypeString, Computed: true},
@@ -96,6 +101,9 @@ func backupToMap(b *raff.Backup) map[string]any {
 		"name":         b.Name,
 		"status":       b.Status,
 		"storage_size": b.StorageSize,
+	}
+	if b.IncrementID != nil {
+		m["increment_id"] = *b.IncrementID
 	}
 	if b.ProductVM != nil {
 		m["vm_id"] = b.ProductVM.String()

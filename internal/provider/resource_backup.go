@@ -18,9 +18,23 @@ import (
 // own retention, including auto-pruning of older backups it created.
 // Don't manage those backups via raff_backup or you'll fight the
 // retention engine.)
+//
+// Incremental series: backups run as an incremental series — the first
+// backup on a VM is a full baseline, and subsequent backups store only
+// changed blocks. The `increment_id` attribute tells you where this row
+// sits in the series (null for legacy standalone backups, 0 for the
+// baseline, 1+ for appended restore points).
+//
+// Destruction caveat: deleting a single mid-series restore point is not
+// supported by the underlying hypervisor — the API rejects it. If your
+// `terraform destroy` for a raff_backup fails with "incremental backup is
+// part of a chain; delete the entire chain instead", remove the whole
+// series via the CLI (`raff backup delete-series <id>`) or by deleting
+// the parent VM, then run `terraform state rm` to detach Terraform's
+// record. A future provider version may expose a series-delete action.
 func resourceBackup() *schema.Resource {
 	return &schema.Resource{
-		Description:   "Captures an on-demand backup of a VM. The backup is async — Terraform returns once the backup record exists; poll status via the data source if you need to wait for `ready`. For recurring backups use raff_backup_schedule.",
+		Description:   "Captures an on-demand backup of a VM. The backup is async — Terraform returns once the backup record exists; poll status via the data source if you need to wait for `ready`. Backups run as an incremental series; see `increment_id` for series position and notes on destroy semantics. For recurring backups use raff_backup_schedule.",
 		CreateContext: resourceBackupCreate,
 		ReadContext:   resourceBackupRead,
 		DeleteContext: resourceBackupDelete,
@@ -48,7 +62,12 @@ func resourceBackup() *schema.Resource {
 			"storage_size": {
 				Type:        schema.TypeInt,
 				Computed:    true,
-				Description: "Backup size in GB.",
+				Description: "Backup size in MB. For incremental restore points this is the per-increment delta; for legacy standalone backups it is the full image size. Display in MB up to 1024, else convert to GB.",
+			},
+			"increment_id": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "Position within the incremental backup series. `null` for legacy standalone backups, `0` for the series baseline, `1+` for appended restore points. Rows that share an underlying image form one series; deleting a mid-series row requires deleting the whole series.",
 			},
 			"region":      {Type: schema.TypeString, Computed: true},
 			"expire_date": {Type: schema.TypeString, Computed: true},
@@ -106,6 +125,9 @@ func setBackupState(d *schema.ResourceData, b *raff.Backup) diag.Diagnostics {
 	d.Set("name", b.Name)
 	d.Set("status", b.Status)
 	d.Set("storage_size", b.StorageSize)
+	if b.IncrementID != nil {
+		d.Set("increment_id", *b.IncrementID)
+	}
 	if b.ProductVM != nil {
 		d.Set("vm_id", b.ProductVM.String())
 	}

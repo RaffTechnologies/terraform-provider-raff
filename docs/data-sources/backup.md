@@ -21,6 +21,7 @@ Reads a single backup by ID.
 - `created_at` (String)
 - `expire_date` (String)
 - `id` (String) The ID of this resource.
+- `increment_id` (Number)
 - `name` (String)
 - `project_id` (String)
 - `region` (String)

@@ -3,12 +3,12 @@
 page_title: "raff_backup Resource - terraform-provider-raff"
 subcategory: "Virtual Machines"
 description: |-
-  Captures an on-demand backup of a VM. The backup is async — Terraform returns once the backup record exists; poll status via the data source if you need to wait for ready. For recurring backups use raff_backup_schedule.
+  Captures an on-demand backup of a VM. The backup is async — Terraform returns once the backup record exists; poll status via the data source if you need to wait for ready. Backups run as an incremental series; see increment_id for series position and notes on destroy semantics. For recurring backups use raff_backup_schedule.
 ---
 
 # raff_backup (Resource)
 
-Captures an on-demand backup of a VM. The backup is async — Terraform returns once the backup record exists; poll status via the data source if you need to wait for `ready`. For recurring backups use raff_backup_schedule.
+Captures an on-demand backup of a VM. The backup is async — Terraform returns once the backup record exists; poll status via the data source if you need to wait for `ready`. Backups run as an incremental series; see `increment_id` for series position and notes on destroy semantics. For recurring backups use raff_backup_schedule.
 
 
 
@@ -29,7 +29,8 @@ Captures an on-demand backup of a VM. The backup is async — Terraform returns 
 - `created_at` (String)
 - `expire_date` (String)
 - `id` (String) The ID of this resource.
+- `increment_id` (Number) Position within the incremental backup series. `null` for legacy standalone backups, `0` for the series baseline, `1+` for appended restore points. Rows that share an underlying image form one series; deleting a mid-series row requires deleting the whole series.
 - `project_id` (String)
 - `region` (String)
 - `status` (String) Lifecycle status: pending, creating, ready, restoring, failed.
-- `storage_size` (Number) Backup size in GB.
+- `storage_size` (Number) Backup size in MB. For incremental restore points this is the per-increment delta; for legacy standalone backups it is the full image size. Display in MB up to 1024, else convert to GB.
