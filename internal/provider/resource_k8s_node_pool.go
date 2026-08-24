@@ -65,21 +65,25 @@ func resourceK8sNodePool() *schema.Resource {
 			"min_nodes": {
 				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				Description: "Autoscale lower bound.",
 			},
 			"max_nodes": {
 				Type:        schema.TypeInt,
 				Optional:    true,
+				Computed:    true,
 				Description: "Autoscale upper bound.",
 			},
 			"labels": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 				Description: "JSON object of Kubernetes labels applied to every node in the pool, e.g. `{\"tier\":\"db\"}`.",
 			},
 			"taints": {
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 				Description: "JSON array of taints, e.g. `[{\"key\":\"gpu\",\"value\":\"true\",\"effect\":\"NoSchedule\"}]`.",
 			},
 			// Computed
