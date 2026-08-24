@@ -42,6 +42,7 @@ func New() *schema.Provider {
 			"raff_security_group": resourceSecurityGroup(),
 			// Wave 1 — VM-adjacent storage
 			"raff_ssh_key":         resourceSSHKey(),
+			"raff_function":        resourceFunction(),
 			"raff_volume":          resourceVolume(),
 			"raff_snapshot":        resourceSnapshot(),
 			"raff_backup":          resourceBackup(),
@@ -51,6 +52,11 @@ func New() *schema.Provider {
 			"raff_role":           resourceRole(),
 			"raff_member":         resourceMember(),
 			"raff_project_member": resourceProjectMember(),
+			// Raff Apps (PaaS)
+			"raff_app_service": resourceAppService(),
+			// Kubernetes
+			"raff_k8s_cluster":   resourceK8sCluster(),
+			"raff_k8s_node_pool": resourceK8sNodePool(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -94,8 +100,16 @@ func New() *schema.Provider {
 			"raff_vm_pricing":       dataSourceVMPricing(),
 			"raff_volume_pricing":   dataSourceStoragePricing("volume"),
 			"raff_backup_pricing":   dataSourceStoragePricing("backup"),
+			// Kubernetes
+			"raff_k8s_cluster":    dataSourceK8sCluster(),
+			"raff_k8s_versions":   dataSourceK8sVersions(),
+			"raff_k8s_node_plans": dataSourceK8sNodePlans(),
 			"raff_snapshot_pricing": dataSourceStoragePricing("snapshot"),
 			"raff_ip_pricing":       dataSourceIPPricing(),
+			// Raff Apps (PaaS)
+			"raff_app_service":  dataSourceAppService(),
+			"raff_app_services": dataSourceAppServices(),
+			"raff_app_tiers":    dataSourceAppTiers(),
 		},
 
 		ConfigureContextFunc: configure,

@@ -33,6 +33,7 @@ func dataSourceVMPricing() *schema.Resource {
 					"monthly_price":           {Type: schema.TypeFloat, Computed: true},
 					"yearly_price":            {Type: schema.TypeFloat, Computed: true},
 					"twenty_four_month_price": {Type: schema.TypeFloat, Computed: true},
+					"out_of_stock":            {Type: schema.TypeBool, Computed: true, Description: "Whether this plan is currently sold out."},
 				}},
 			},
 		},
@@ -56,6 +57,10 @@ func dataSourceVMPricingRead(ctx context.Context, d *schema.ResourceData, meta a
 	}
 	out := make([]map[string]any, 0, len(plans))
 	for _, p := range plans {
+		outOfStock := false
+		if p.OutOfStock != nil {
+			outOfStock = *p.OutOfStock
+		}
 		out = append(out, map[string]any{
 			"id":                      p.ID,
 			"vm_type":                 string(p.VMType),
@@ -68,6 +73,7 @@ func dataSourceVMPricingRead(ctx context.Context, d *schema.ResourceData, meta a
 			"monthly_price":           p.MonthlyPrice,
 			"yearly_price":            p.YearlyPrice,
 			"twenty_four_month_price": p.TwentyFourMonthPrice,
+			"out_of_stock":            outOfStock,
 		})
 	}
 	d.SetId("vm_pricing")

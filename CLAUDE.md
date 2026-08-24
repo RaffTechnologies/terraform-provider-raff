@@ -8,7 +8,7 @@ Terraform provider for managing Raff cloud resources. Built on `raff-go` client 
 2. **Public API only** — schema must match `docs/api-reference/openapi.yaml` exactly.
 3. **Never expose admin/internal fields** — no admin endpoints, no `X-Account-ID`, no internal-only attributes.
 4. **Sync order**: spec → raff-go → raff-cli → **terraform-provider-raff**
-5. **terraform-plugin-framework** — use the modern SDK, not the legacy SDKv2.
+5. **terraform-plugin-sdk/v2 (SDKv2)** — the whole provider is SDKv2; new resources follow the existing SDKv2 patterns (see `resource_volume.go`). Do not mix in plugin-framework.
 
 ## Structure
 
