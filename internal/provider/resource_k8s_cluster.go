@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -11,7 +12,7 @@ import (
 
 func resourceK8sCluster() *schema.Resource {
 	return &schema.Resource{
-		Description: "Manages a Raff managed Kubernetes cluster. The cluster is created with one default node pool; add more pools with `raff_k8s_node_pool`. Only pay-as-you-go accounts can create clusters through the API.",
+		Description: "Manages a Raff managed Kubernetes cluster. The cluster is created with one default node pool; add more pools with `raff_k8s_node_pool`. On a subscription account the API charges the saved payment method automatically.",
 
 		CreateContext: resourceK8sClusterCreate,
 		ReadContext:   resourceK8sClusterRead,
@@ -24,6 +25,7 @@ func resourceK8sCluster() *schema.Resource {
 
 		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(30 * time.Minute),
+			Update: schema.DefaultTimeout(30 * time.Minute),
 			Delete: schema.DefaultTimeout(20 * time.Minute),
 		},
 
@@ -37,8 +39,25 @@ func resourceK8sCluster() *schema.Resource {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Computed:    true,
-				ForceNew:    true,
-				Description: "Kubernetes version ID from the `raff_k8s_versions` data source. Defaults to the platform default.",
+				Description: "Kubernetes version ID from the `raff_k8s_versions` data source. Defaults to the platform default. Changing it triggers a rolling IN-PLACE upgrade (minor versions sequentially, no skipping; not reversible) — the apply waits until the upgrade completes.",
+			},
+			"upgrade_mode": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
+				Description: "Automatic upgrade mode: `manual` (default), `auto_patch` (patch releases apply in the maintenance window), or `auto_minor` (minor versions too, after a stability period).",
+			},
+			"maintenance_day": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Maintenance window day, 0 (Sunday) to 6 (Saturday). The window is 4 hours.",
+			},
+			"maintenance_start": {
+				Type:        schema.TypeInt,
+				Optional:    true,
+				Computed:    true,
+				Description: "Maintenance window start hour (0–23, UTC).",
 			},
 			"ha_enabled": {
 				Type:        schema.TypeBool,
@@ -258,6 +277,18 @@ func resourceK8sClusterRead(ctx context.Context, d *schema.ResourceData, meta an
 			d.Set("kubeconfig", kc.Kubeconfig)
 		}
 	}
+
+	// Upgrade mode + maintenance window (best-effort — the endpoint needs a
+	// running cluster).
+	if info, _, err := client.Kubernetes.Upgrades(ctx, d.Id()); err == nil {
+		d.Set("upgrade_mode", info.UpgradeMode)
+		if info.MaintenanceDay != nil {
+			d.Set("maintenance_day", *info.MaintenanceDay)
+		}
+		if info.MaintenanceStart != nil {
+			d.Set("maintenance_start", *info.MaintenanceStart)
+		}
+	}
 	return nil
 }
 
@@ -302,7 +333,59 @@ func resourceK8sClusterUpdate(ctx context.Context, d *schema.ResourceData, meta 
 		}
 	}
 
+	// In-place Kubernetes version upgrade: rolling (masters one at a time,
+	// workers drained), sequential minors, not reversible. The apply blocks
+	// until every node runs the target version.
+	if d.HasChange("version_id") {
+		if target := d.Get("version_id").(int); target > 0 {
+			if _, err := client.Kubernetes.Upgrade(ctx, d.Id(), target, true); err != nil {
+				return diag.FromErr(err)
+			}
+			if err := waitForUpgradeDone(ctx, client, d.Id(), d.Timeout(schema.TimeoutUpdate)); err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	if d.HasChange("upgrade_mode") || d.HasChange("maintenance_day") || d.HasChange("maintenance_start") {
+		mode := d.Get("upgrade_mode").(string)
+		if mode == "" {
+			mode = "manual"
+		}
+		day := d.Get("maintenance_day").(int)
+		start := d.Get("maintenance_start").(int)
+		if _, err := client.Kubernetes.SetMaintenance(ctx, d.Id(), mode, &day, &start); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	return resourceK8sClusterRead(ctx, d, meta)
+}
+
+// waitForUpgradeDone polls the cluster's upgrade state until it leaves
+// "upgrading". A "failed" state (90-minute server-side timeout) is an error;
+// the upgrade can be retried by re-applying.
+func waitForUpgradeDone(ctx context.Context, client *raff.Client, clusterID string, timeout time.Duration) error {
+	waitCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	for {
+		info, _, err := client.Kubernetes.Upgrades(waitCtx, clusterID)
+		if err == nil {
+			switch info.UpgradeStatus {
+			case "upgrading", "scheduled":
+				// still running
+			case "failed":
+				return fmt.Errorf("the upgrade did not complete — workloads keep running; retry by re-applying, or check the cluster's Activity feed")
+			default:
+				return nil // idle — done
+			}
+		}
+		select {
+		case <-waitCtx.Done():
+			return fmt.Errorf("timed out waiting for the upgrade to complete: %w", waitCtx.Err())
+		case <-time.After(20 * time.Second):
+		}
+	}
 }
 
 func resourceK8sClusterDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {

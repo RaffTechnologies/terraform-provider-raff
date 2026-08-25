@@ -3,12 +3,12 @@
 page_title: "raff_k8s_cluster Resource - terraform-provider-raff"
 subcategory: ""
 description: |-
-  Manages a Raff managed Kubernetes cluster. The cluster is created with one default node pool; add more pools with raff_k8s_node_pool. Only pay-as-you-go accounts can create clusters through the API.
+  Manages a Raff managed Kubernetes cluster. The cluster is created with one default node pool; add more pools with raff_k8s_node_pool. On a subscription account the API charges the saved payment method automatically.
 ---
 
 # raff_k8s_cluster (Resource)
 
-Manages a Raff managed Kubernetes cluster. The cluster is created with one default node pool; add more pools with `raff_k8s_node_pool`. Only pay-as-you-go accounts can create clusters through the API.
+Manages a Raff managed Kubernetes cluster. The cluster is created with one default node pool; add more pools with `raff_k8s_node_pool`. On a subscription account the API charges the saved payment method automatically.
 
 
 
@@ -24,13 +24,16 @@ Manages a Raff managed Kubernetes cluster. The cluster is created with one defau
 
 - `cluster_cidr` (String) Pod network CIDR. Defaults to 10.42.0.0/16.
 - `ha_enabled` (Boolean) HA control plane (3 masters + redundant gateway, flat monthly fee). Can be upgraded in place from `false` to `true`; downgrading is not supported.
+- `maintenance_day` (Number) Maintenance window day, 0 (Sunday) to 6 (Saturday). The window is 4 hours.
+- `maintenance_start` (Number) Maintenance window start hour (0–23, UTC).
 - `metallb_enabled` (Boolean) Install MetalLB for `LoadBalancer` services.
 - `service_cidr` (String) Service network CIDR. Defaults to 10.43.0.0/16.
 - `storage_node_count` (Number) Dedicated Longhorn storage nodes (0, 2 or 3). 0 disables in-cluster block storage.
 - `storage_node_disk_gb` (Number) Data disk per storage node in GB. Required when `storage_node_count` > 0.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `traefik_enabled` (Boolean) Install the Traefik ingress controller.
-- `version_id` (Number) Kubernetes version ID from the `raff_k8s_versions` data source. Defaults to the platform default.
+- `upgrade_mode` (String) Automatic upgrade mode: `manual` (default), `auto_patch` (patch releases apply in the maintenance window), or `auto_minor` (minor versions too, after a stability period).
+- `version_id` (Number) Kubernetes version ID from the `raff_k8s_versions` data source. Defaults to the platform default. Changing it triggers a rolling IN-PLACE upgrade (minor versions sequentially, no skipping; not reversible) — the apply waits until the upgrade completes.
 
 ### Read-Only
 
@@ -68,3 +71,4 @@ Optional:
 
 - `create` (String)
 - `delete` (String)
+- `update` (String)
