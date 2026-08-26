@@ -28,8 +28,8 @@ Manages a Raff managed Kubernetes cluster. The cluster is created with one defau
 - `maintenance_start` (Number) Maintenance window start hour (0–23, UTC).
 - `metallb_enabled` (Boolean) Install MetalLB for `LoadBalancer` services.
 - `service_cidr` (String) Service network CIDR. Defaults to 10.43.0.0/16.
-- `storage_node_count` (Number) Dedicated Longhorn storage nodes (0, 2 or 3). 0 disables in-cluster block storage.
-- `storage_node_disk_gb` (Number) Data disk per storage node in GB. Required when `storage_node_count` > 0.
+- `storage_node_count` (Number, Deprecated) Deprecated — storage nodes are no longer offered; leave unset.
+- `storage_node_disk_gb` (Number, Deprecated) Deprecated — storage nodes are no longer offered; leave unset.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `traefik_enabled` (Boolean) Install the Traefik ingress controller.
 - `upgrade_mode` (String) Automatic upgrade mode: `manual` (default), `auto_patch` (patch releases apply in the maintenance window), or `auto_minor` (minor versions too, after a stability period).
