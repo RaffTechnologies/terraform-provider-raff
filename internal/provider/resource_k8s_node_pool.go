@@ -49,12 +49,12 @@ func resourceK8sNodePool() *schema.Resource {
 				Type:        schema.TypeInt,
 				Required:    true,
 				ForceNew:    true,
-				Description: "Worker node plan ID from the `raff_k8s_node_plans` data source.",
+				Description: "Worker node plan ID from the `raff_k8s_node_plans` data source. Pools in one cluster may use different plans.",
 			},
 			"node_count": {
 				Type:        schema.TypeInt,
 				Required:    true,
-				Description: "Node count (2–20). Scale-down drains nodes first, honouring PodDisruptionBudgets.",
+				Description: "Node count (1–20; the cluster keeps at least 2 workers overall). Scale-down drains nodes first, honouring PodDisruptionBudgets.",
 			},
 			"autoscale_enabled": {
 				Type:        schema.TypeBool,

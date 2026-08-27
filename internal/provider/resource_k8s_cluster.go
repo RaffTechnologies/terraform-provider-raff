@@ -88,7 +88,7 @@ func resourceK8sCluster() *schema.Resource {
 						"node_count": {
 							Type:        schema.TypeInt,
 							Required:    true,
-							Description: "Worker node count (2–20). Scale-down drains nodes first.",
+							Description: "Worker node count (2–20 for a single pool; add `raff_k8s_node_pool` resources for extra pools, each with its own plan). Scale-down drains nodes first.",
 						},
 						"id": {Type: schema.TypeString, Computed: true, Description: "Pool ID."},
 					},
