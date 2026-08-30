@@ -19,8 +19,8 @@ Manages an additional node pool on a Raff Kubernetes cluster. The cluster's firs
 
 - `cluster_id` (String) Short cluster ID (`raff_k8s_cluster.x.cluster_id`).
 - `name` (String) Pool name, unique in the cluster.
-- `node_count` (Number) Node count (2–20). Scale-down drains nodes first, honouring PodDisruptionBudgets.
-- `plan_id` (Number) Worker node plan ID from the `raff_k8s_node_plans` data source.
+- `node_count` (Number) Node count (1–20; the cluster keeps at least 2 workers overall). Scale-down drains nodes first, honouring PodDisruptionBudgets. With `autoscale_enabled = true` this is only the pool's starting size — the autoscaler owns the count from then on, and changing this value has no effect.
+- `plan_id` (Number) Worker node plan ID from the `raff_k8s_node_plans` data source. Pools in one cluster may use different plans.
 
 ### Optional
 
@@ -29,9 +29,17 @@ Manages an additional node pool on a Raff Kubernetes cluster. The cluster's firs
 - `max_nodes` (Number) Autoscale upper bound.
 - `min_nodes` (Number) Autoscale lower bound.
 - `taints` (String) JSON array of taints, e.g. `[{"key":"gpu","value":"true","effect":"NoSchedule"}]`.
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 
 ### Read-Only
 
 - `actual_node_count` (Number) Nodes that currently exist (differs from node_count briefly while scaling).
 - `id` (String) The ID of this resource.
 - `status` (String)
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `delete` (String)

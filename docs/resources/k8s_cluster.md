@@ -52,7 +52,7 @@ Manages a Raff managed Kubernetes cluster. The cluster is created with one defau
 
 Required:
 
-- `node_count` (Number) Worker node count (2–20). Scale-down drains nodes first.
+- `node_count` (Number) Worker node count (2–20 for a single pool; add `raff_k8s_node_pool` resources for extra pools, each with its own plan). Scale-down drains nodes first.
 - `plan_id` (Number) Worker node plan ID from the `raff_k8s_node_plans` data source.
 
 Optional:
