@@ -8,6 +8,13 @@ import (
 	raff "github.com/rafftechnologies/raff-go"
 )
 
+// Version is the provider's release version, stamped by goreleaser and set
+// from main() at startup. It goes out in the User-Agent of every API call.
+// It was previously hardcoded to "terraform-provider-raff/0.1.1" and never
+// updated, so every release identified itself as 0.1.1 and the server side
+// had no way to tell which provider version a request came from.
+var Version = "dev"
+
 // New returns the Raff provider.
 func New() *schema.Provider {
 	return &schema.Provider{
@@ -120,7 +127,7 @@ func configure(ctx context.Context, d *schema.ResourceData) (any, diag.Diagnosti
 	apiKey := d.Get("api_key").(string)
 
 	opts := []raff.ClientOpt{
-		raff.SetUserAgent("terraform-provider-raff/0.1.1"),
+		raff.SetUserAgent("terraform-provider-raff/" + Version),
 	}
 
 	if v, ok := d.GetOk("api_url"); ok {
