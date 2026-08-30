@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -221,11 +222,31 @@ func resourceK8sClusterRead(ctx context.Context, d *schema.ResourceData, meta an
 		return diag.FromErr(err)
 	}
 
+	// Upgrade mode decides whether the platform moves the cluster's version on
+	// its own, which changes how the version is refreshed below — so read it
+	// first. Best-effort: the endpoint needs a running cluster.
+	autoUpgrading := false
+	if info, _, err := client.Kubernetes.Upgrades(ctx, d.Id()); err == nil {
+		d.Set("upgrade_mode", info.UpgradeMode)
+		if info.MaintenanceDay != nil {
+			d.Set("maintenance_day", *info.MaintenanceDay)
+		}
+		if info.MaintenanceStart != nil {
+			d.Set("maintenance_start", *info.MaintenanceStart)
+		}
+		autoUpgrading = strings.HasPrefix(info.UpgradeMode, "auto_")
+	}
+
 	d.Set("name", cluster.Name)
 	d.Set("cluster_id", cluster.ClusterID)
 	d.Set("status", string(cluster.Status))
 	d.Set("ready", cluster.Ready)
-	if cluster.K8SVersionID != nil {
+	// Under auto_patch/auto_minor the platform upgrades the cluster itself, so
+	// the live version is not drift: refreshing it would make the next plan
+	// want to move a pinned version_id back, and an upgrade cannot be undone
+	// (minor versions apply sequentially, in place, one way). Leave the
+	// configured value in state and let the platform own the version.
+	if cluster.K8SVersionID != nil && !autoUpgrading {
 		d.Set("version_id", *cluster.K8SVersionID)
 	}
 	if cluster.K8SVersion != nil {
@@ -259,10 +280,24 @@ func resourceK8sClusterRead(ctx context.Context, d *schema.ResourceData, meta an
 		}
 		for _, p := range *cluster.NodePools {
 			if (stored != "" && p.ID.String() == stored) || (stored == "" && p.Name == defaultPoolName(d)) {
+				nodeCount := p.NodeCount
+				// Autoscaling can be turned on for the default pool through
+				// the API even though this block has no field for it. When it
+				// is, the autoscaler owns the count and the live value is not
+				// drift — refreshing it would make every later plan scale the
+				// pool back to the configured number, destroying nodes the
+				// autoscaler had just added. Keep what the config asked for.
+				if p.AutoscaleEnabled != nil && *p.AutoscaleEnabled {
+					if v := d.Get("default_pool").([]any); len(v) > 0 {
+						if configured, ok := v[0].(map[string]any)["node_count"].(int); ok && configured > 0 {
+							nodeCount = configured
+						}
+					}
+				}
 				pool := map[string]any{
 					"id":         p.ID.String(),
 					"name":       p.Name,
-					"node_count": p.NodeCount,
+					"node_count": nodeCount,
 				}
 				if p.PlanID != nil {
 					pool["plan_id"] = *p.PlanID
@@ -277,18 +312,6 @@ func resourceK8sClusterRead(ctx context.Context, d *schema.ResourceData, meta an
 	if cluster.Status == raff.K8sClusterStatusRunning || cluster.Ready {
 		if kc, _, err := client.Kubernetes.Kubeconfig(ctx, d.Id()); err == nil {
 			d.Set("kubeconfig", kc.Kubeconfig)
-		}
-	}
-
-	// Upgrade mode + maintenance window (best-effort — the endpoint needs a
-	// running cluster).
-	if info, _, err := client.Kubernetes.Upgrades(ctx, d.Id()); err == nil {
-		d.Set("upgrade_mode", info.UpgradeMode)
-		if info.MaintenanceDay != nil {
-			d.Set("maintenance_day", *info.MaintenanceDay)
-		}
-		if info.MaintenanceStart != nil {
-			d.Set("maintenance_start", *info.MaintenanceStart)
 		}
 	}
 	return nil
@@ -330,8 +353,18 @@ func resourceK8sClusterUpdate(ctx context.Context, d *schema.ResourceData, meta 
 			return diag.Errorf("default pool ID unknown — run 'terraform refresh' first")
 		}
 		count := d.Get("default_pool.0.node_count").(int)
-		if _, err := client.Kubernetes.ScaleNodePool(ctx, d.Id(), poolID, count); err != nil {
+		// Scaling a pool the autoscaler owns undoes its decisions on every
+		// apply, and a scale-down drains and destroys a node to do it. Leave
+		// an autoscaling default pool to the autoscaler.
+		if autoscaling, err := defaultPoolAutoscaling(ctx, client, d.Id(), poolID); err != nil {
 			return diag.FromErr(err)
+		} else if autoscaling {
+			count = 0
+		}
+		if count > 0 {
+			if _, err := client.Kubernetes.ScaleNodePool(ctx, d.Id(), poolID, count); err != nil {
+				return diag.FromErr(err)
+			}
 		}
 	}
 
@@ -404,4 +437,21 @@ func resourceK8sClusterDelete(ctx context.Context, d *schema.ResourceData, meta 
 		return diag.Errorf("cluster %s deletion did not complete: %s", d.Id(), err)
 	}
 	return nil
+}
+
+// defaultPoolAutoscaling reports whether the cluster's default pool has
+// autoscaling enabled. The default_pool block carries no field for it — it can
+// only be turned on through the API — so the live pool has to be consulted
+// before scaling it from configuration.
+func defaultPoolAutoscaling(ctx context.Context, client *raff.Client, clusterID, poolID string) (bool, error) {
+	pools, _, err := client.Kubernetes.ListNodePools(ctx, clusterID)
+	if err != nil {
+		return false, fmt.Errorf("checking whether the default pool autoscales: %w", err)
+	}
+	for _, p := range pools {
+		if p.ID.String() == poolID {
+			return p.AutoscaleEnabled != nil && *p.AutoscaleEnabled, nil
+		}
+	}
+	return false, nil
 }
