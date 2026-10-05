@@ -18,7 +18,7 @@ Manages a user inside a managed database, with read-only or read-write access.
 ### Required
 
 - `database_id` (String) Short ID of the database (`raff_database.<name>.database_id`).
-- `name` (String) 3 to 31 characters: a lowercase letter, then lowercase letters, digits or underscores.
+- `name` (String) 3 to 31 characters: a lowercase letter, then lowercase letters, digits or underscores. Names starting with `app_` or `fnb_` are reserved for Raff Apps and Functions.
 
 ### Optional
 

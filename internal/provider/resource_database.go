@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/google/uuid"
@@ -90,8 +91,9 @@ func resourceDatabase() *schema.Resource {
 			"public_allowlist": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "Source CIDRs allowed on the public endpoint. Empty allows all sources.",
+				MaxItems:    20,
+				Elem:        &schema.Schema{Type: schema.TypeString, ValidateFunc: validateAllowlistEntry},
+				Description: "Source IPv4 CIDRs allowed on the public endpoint, e.g. `203.0.113.0/24` or `198.51.100.7/32` (at most 20). Empty allows all sources; `0.0.0.0/0` is not accepted.",
 			},
 
 			// Computed
@@ -185,6 +187,24 @@ func resourceDatabaseCreate(ctx context.Context, d *schema.ResourceData, meta an
 		}
 	}
 	return resourceDatabaseRead(ctx, d, meta)
+}
+
+// validateAllowlistEntry accepts what the API stores unchanged: an IPv4 CIDR
+// written with its network address and a prefix above 0. Anything the API
+// would rewrite (a bare IP, 203.0.113.5/24) shows as drift on every plan.
+func validateAllowlistEntry(v any, key string) ([]string, []error) {
+	s, _ := v.(string)
+	ip, ipnet, err := net.ParseCIDR(s)
+	switch {
+	case err != nil || ip.To4() == nil:
+		return nil, []error{fmt.Errorf("%s: %q is not an IPv4 CIDR (write a single address as 198.51.100.7/32)", key, s)}
+	case ipnet.String() != s:
+		return nil, []error{fmt.Errorf("%s: write %q as %q", key, s, ipnet.String())}
+	}
+	if ones, _ := ipnet.Mask.Size(); ones == 0 {
+		return nil, []error{fmt.Errorf("%s: 0.0.0.0/0 is not accepted; leave public_allowlist empty to allow all sources", key)}
+	}
+	return nil, nil
 }
 
 func databaseAllowlist(d *schema.ResourceData) []string {

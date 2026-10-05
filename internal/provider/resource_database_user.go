@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -31,10 +32,11 @@ func resourceDatabaseUser() *schema.Resource {
 				Description: "Short ID of the database (`raff_database.<name>.database_id`).",
 			},
 			"name": {
-				Type:        schema.TypeString,
-				Required:    true,
-				ForceNew:    true,
-				Description: "3 to 31 characters: a lowercase letter, then lowercase letters, digits or underscores.",
+				Type:         schema.TypeString,
+				Required:     true,
+				ForceNew:     true,
+				ValidateFunc: validateDatabaseUserName,
+				Description:  "3 to 31 characters: a lowercase letter, then lowercase letters, digits or underscores. Names starting with `app_` or `fnb_` are reserved for Raff Apps and Functions.",
 			},
 			"role": {
 				Type:         schema.TypeString,
@@ -119,6 +121,20 @@ func resourceDatabaseUserImport(ctx context.Context, d *schema.ResourceData, met
 		return nil, err
 	}
 	return []*schema.ResourceData{d}, nil
+}
+
+var databaseUserNameRe = regexp.MustCompile(`^[a-z][a-z0-9_]{2,30}$`)
+
+// validateDatabaseUserName mirrors the API's rule so a bad name fails at plan.
+func validateDatabaseUserName(v any, key string) ([]string, []error) {
+	s, _ := v.(string)
+	switch {
+	case !databaseUserNameRe.MatchString(s):
+		return nil, []error{fmt.Errorf("%s: %q must be 3 to 31 characters: a lowercase letter, then lowercase letters, digits or underscores", key, s)}
+	case strings.HasPrefix(s, "app_") || strings.HasPrefix(s, "fnb_"):
+		return nil, []error{fmt.Errorf("%s: %q is reserved: names starting with app_ or fnb_ are used by Raff Apps and Functions", key, s)}
+	}
+	return nil, nil
 }
 
 func splitDatabaseUserID(id string) (string, string, error) {

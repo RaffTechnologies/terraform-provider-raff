@@ -26,7 +26,7 @@ Manages a Raff managed database (PostgreSQL, MySQL, Valkey, ClickHouse or Kafka)
 - `ha_enabled` (Boolean) High availability: a standby that takes over automatically on failure. Toggles in place.
 - `plan_id` (Number) Plan ID from the `raff_database_plans` data source. Defaults to the engine's free plan. Changing it resizes in place (same engine; a free database cannot move to another plan this way).
 - `public_access` (Boolean) Public access through `public_host`. Toggles in place.
-- `public_allowlist` (List of String) Source CIDRs allowed on the public endpoint. Empty allows all sources.
+- `public_allowlist` (List of String) Source IPv4 CIDRs allowed on the public endpoint, e.g. `203.0.113.0/24` or `198.51.100.7/32` (at most 20). Empty allows all sources; `0.0.0.0/0` is not accepted.
 - `replica_count` (Number) Read replicas (PostgreSQL only). Changes in place.
 - `storage_gb` (Number) Storage in GB. Defaults to the plan's included storage. Grows in place; it cannot shrink.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
