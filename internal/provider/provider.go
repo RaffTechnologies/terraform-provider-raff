@@ -64,6 +64,9 @@ func New() *schema.Provider {
 			// Kubernetes
 			"raff_k8s_cluster":   resourceK8sCluster(),
 			"raff_k8s_node_pool": resourceK8sNodePool(),
+			// Managed databases
+			"raff_database":      resourceDatabase(),
+			"raff_database_user": resourceDatabaseUser(),
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
@@ -111,6 +114,10 @@ func New() *schema.Provider {
 			"raff_k8s_cluster":    dataSourceK8sCluster(),
 			"raff_k8s_versions":   dataSourceK8sVersions(),
 			"raff_k8s_node_plans": dataSourceK8sNodePlans(),
+			// Managed databases
+			"raff_database":         dataSourceDatabase(),
+			"raff_database_plans":   dataSourceDatabasePlans(),
+			"raff_database_engines": dataSourceDatabaseEngines(),
 			"raff_snapshot_pricing": dataSourceStoragePricing("snapshot"),
 			"raff_ip_pricing":       dataSourceIPPricing(),
 			// Raff Apps (PaaS)
