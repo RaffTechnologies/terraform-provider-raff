@@ -23,6 +23,7 @@ Manages a Raff managed database (PostgreSQL, MySQL, Valkey, ClickHouse or Kafka)
 
 - `engine` (String) Engine: `postgres` (default), `mysql`, `valkey`, `clickhouse` or `kafka`.
 - `engine_version` (String) Engine major version from the `raff_database_engines` data source. Defaults to the latest.
+- `extensions` (Set of String) PostgreSQL only. Extensions to turn on: `vector`, `pg_trgm`, `pg_stat_statements`, `hstore`, `uuid-ossp`, `citext`, `ltree`, `pgcrypto` or `unaccent`. At create they are on before the database is running; adding one later turns it on in place. Removing one only stops Terraform managing it, it is never dropped.
 - `ha_enabled` (Boolean) High availability: a standby that takes over automatically on failure. Toggles in place.
 - `plan_id` (Number) Plan ID from the `raff_database_plans` data source. Defaults to the engine's free plan. Changing it resizes in place (same engine; a free database cannot move to another plan this way).
 - `public_access` (Boolean) Public access through `public_host`. Toggles in place.
@@ -30,6 +31,7 @@ Manages a Raff managed database (PostgreSQL, MySQL, Valkey, ClickHouse or Kafka)
 - `replica_count` (Number) Read replicas (PostgreSQL only). Changes in place.
 - `storage_gb` (Number) Storage in GB. Defaults to the plan's included storage. Grows in place; it cannot shrink.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+- `valkey_mode` (String) Valkey only, set at create. `queue` (default) keeps every key and refuses writes when memory is full; `cache` drops the least recently used keys. It cannot change on a running database yet, so a change is refused instead of replacing the database. Not read back from the API.
 - `vpc_id` (String) VPC ID for the private endpoint. Setting, changing or removing it connects or disconnects the database in place.
 
 ### Read-Only

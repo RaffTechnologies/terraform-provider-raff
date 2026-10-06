@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,6 +22,7 @@ func resourceDatabase() *schema.Resource {
 		ReadContext:   resourceDatabaseRead,
 		UpdateContext: resourceDatabaseUpdate,
 		DeleteContext: resourceDatabaseDelete,
+		CustomizeDiff: resourceDatabaseCustomizeDiff,
 
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -95,6 +97,19 @@ func resourceDatabase() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString, ValidateFunc: validateAllowlistEntry},
 				Description: "Source IPv4 CIDRs allowed on the public endpoint, e.g. `203.0.113.0/24` or `198.51.100.7/32` (at most 20). Empty allows all sources; `0.0.0.0/0` is not accepted.",
 			},
+			"extensions": {
+				Type:        schema.TypeSet,
+				Optional:    true,
+				Set:         schema.HashString,
+				Elem:        &schema.Schema{Type: schema.TypeString, ValidateFunc: validation.StringInSlice(databaseCreateExtensions, false)},
+				Description: "PostgreSQL only. Extensions to turn on: `vector`, `pg_trgm`, `pg_stat_statements`, `hstore`, `uuid-ossp`, `citext`, `ltree`, `pgcrypto` or `unaccent`. At create they are on before the database is running; adding one later turns it on in place. Removing one only stops Terraform managing it, it is never dropped.",
+			},
+			"valkey_mode": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice([]string{"queue", "cache"}, false),
+				Description:  "Valkey only, set at create. `queue` (default) keeps every key and refuses writes when memory is full; `cache` drops the least recently used keys. It cannot change on a running database yet, so a change is refused instead of replacing the database. Not read back from the API.",
+			},
 
 			// Computed
 			"database_id":           {Type: schema.TypeString, Computed: true, Description: "Short database ID used in hostnames and the API."},
@@ -115,6 +130,49 @@ func resourceDatabase() *schema.Resource {
 			"created_at":            {Type: schema.TypeString, Computed: true},
 		},
 	}
+}
+
+// databaseCreateExtensions is what the API accepts in create's extensions.
+var databaseCreateExtensions = []string{
+	"vector", "pg_trgm", "pg_stat_statements", "hstore",
+	"uuid-ossp", "citext", "ltree", "pgcrypto", "unaccent",
+}
+
+// valkeyModePolicy maps valkey_mode to the engine_config value the API accepts.
+var valkeyModePolicy = map[string]string{
+	"queue": "noeviction",
+	"cache": "allkeys-lru",
+}
+
+func databaseExtensions(d resourceGetter) []string {
+	out := []string{}
+	if set, ok := d.Get("extensions").(*schema.Set); ok {
+		for _, v := range set.List() {
+			out = append(out, v.(string))
+		}
+	}
+	return out
+}
+
+type resourceGetter interface{ Get(string) any }
+
+// resourceDatabaseCustomizeDiff refuses settings the engine does not have, and
+// a valkey_mode change on a running database (the API cannot change it yet,
+// and replacing a Valkey would lose its keys).
+func resourceDatabaseCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ any) error {
+	engine := d.Get("engine").(string)
+	if len(databaseExtensions(d)) > 0 && engine != "postgres" {
+		return fmt.Errorf("extensions are for PostgreSQL only, not %s", engine)
+	}
+	if d.Get("valkey_mode").(string) != "" && engine != "valkey" {
+		return fmt.Errorf("valkey_mode is for Valkey only, not %s", engine)
+	}
+	if d.Id() != "" && d.HasChange("valkey_mode") {
+		if old, _ := d.GetChange("valkey_mode"); old.(string) != "" {
+			return fmt.Errorf("valkey_mode is set at create and cannot change on a running database yet")
+		}
+	}
+	return nil
 }
 
 // databaseFreePlanID returns the engine's free-tier plan.
@@ -164,6 +222,12 @@ func resourceDatabaseCreate(ctx context.Context, d *schema.ResourceData, meta an
 			return diag.Errorf("invalid vpc_id: %s", err)
 		}
 		req.VpcID = &id
+	}
+	if exts := databaseExtensions(d); len(exts) > 0 {
+		req.Extensions = &exts
+	}
+	if mode := d.Get("valkey_mode").(string); mode != "" {
+		req.EngineConfig = &map[string]string{"maxmemory-policy": valkeyModePolicy[mode]}
 	}
 
 	db, _, err := client.Databases.Create(ctx, req)
@@ -284,6 +348,21 @@ func resourceDatabaseRead(ctx context.Context, d *schema.ResourceData, meta any)
 		d.Set("created_at", db.CreatedAt.Format(time.RFC3339))
 	}
 
+	// Only the configured extensions are tracked (others may be turned on in
+	// the dashboard); one turned off elsewhere shows as a diff.
+	if want := databaseExtensions(d); len(want) > 0 && db.Status != nil && *db.Status == raff.DatabaseStatusRunning {
+		if exts, _, err := client.Databases.ListExtensions(ctx, d.Id()); err == nil {
+			on := []string{}
+			for _, e := range exts {
+				name := raff.StringValue(e.Name)
+				if raff.BoolValue(e.Installed) && slices.Contains(want, name) {
+					on = append(on, name)
+				}
+			}
+			d.Set("extensions", on)
+		}
+	}
+
 	if conn, _, err := client.Databases.Connection(ctx, d.Id(), true); err == nil {
 		d.Set("username", raff.StringValue(conn.Username))
 		d.Set("password", raff.StringValue(conn.Password))
@@ -341,6 +420,17 @@ func resourceDatabaseUpdate(ctx context.Context, d *schema.ResourceData, meta an
 		if current.(string) != "" {
 			if _, _, err := client.Databases.ConnectVPC(ctx, id, current.(string)); err != nil {
 				return diag.FromErr(err)
+			}
+		}
+	}
+
+	// Added extensions are turned on; removed ones are only no longer
+	// managed (dropping one could fail or remove data that uses it).
+	if d.HasChange("extensions") {
+		old, current := d.GetChange("extensions")
+		for _, v := range current.(*schema.Set).Difference(old.(*schema.Set)).List() {
+			if _, err := client.Databases.SetExtension(ctx, id, v.(string), true); err != nil {
+				return diag.Errorf("turn on extension %s: %s", v.(string), err)
 			}
 		}
 	}
