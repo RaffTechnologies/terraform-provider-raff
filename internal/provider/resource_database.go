@@ -185,8 +185,23 @@ func resourceDatabaseCreate(ctx context.Context, d *schema.ResourceData, meta an
 		if _, _, err := client.Databases.SetPublicAccess(ctx, id, true, databaseAllowlist(d)); err != nil {
 			return diag.FromErr(err)
 		}
+		waitForDatabasePublic(waitCtx, client, id)
 	}
 	return resourceDatabaseRead(ctx, d, meta)
+}
+
+// waitForDatabasePublic holds the apply until the public address answers, so
+// connection_uri works for whatever runs next (the gateway routes a database
+// 10 to 20 seconds after it is running). It does not fail the apply: an
+// allowlist can keep the machine running Terraform out.
+func waitForDatabasePublic(ctx context.Context, client *raff.Client, id string) {
+	conn, _, err := client.Databases.Connection(ctx, id, false)
+	if err != nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	_ = raff.WaitForPublicEndpoint(ctx, conn)
 }
 
 // validateAllowlistEntry accepts what the API stores unchanged: an IPv4 CIDR
@@ -338,6 +353,9 @@ func resourceDatabaseUpdate(ctx context.Context, d *schema.ResourceData, meta an
 		}
 		if _, _, err := client.Databases.SetPublicAccess(ctx, id, enabled, list); err != nil {
 			return diag.FromErr(err)
+		}
+		if enabled {
+			waitForDatabasePublic(ctx, client, id)
 		}
 	}
 
