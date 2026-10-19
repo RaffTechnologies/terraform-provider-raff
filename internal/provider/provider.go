@@ -60,7 +60,9 @@ func New() *schema.Provider {
 			"raff_member":         resourceMember(),
 			"raff_project_member": resourceProjectMember(),
 			// Raff Apps (PaaS)
-			"raff_app_service": resourceAppService(),
+			"raff_app_service":       resourceAppService(),
+			"raff_app_custom_domain": resourceAppCustomDomain(),
+			"raff_app_database_link": resourceAppDatabaseLink(),
 			// Kubernetes
 			"raff_k8s_cluster":   resourceK8sCluster(),
 			"raff_k8s_node_pool": resourceK8sNodePool(),

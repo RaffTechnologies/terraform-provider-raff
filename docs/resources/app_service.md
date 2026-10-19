@@ -3,12 +3,14 @@
 page_title: "raff_app_service Resource - terraform-provider-raff"
 subcategory: ""
 description: |-
-  Manages a Raff Apps service — a web service, private service, worker, cron job, or one-off job on the Raff PaaS. Code deploys happen outside Terraform — push with the raff apps deploy CLI, the dashboard, or a connected GitHub repo. Scaling changes on a live service roll out with no downtime.
+  Manages a Raff Apps app: a web service, private service, worker, cron job or one-off job. Image and GitHub apps deploy when created. Settings change in place, a new image_ref rolls out as a deploy, and scaling changes apply to the running app. An app built from uploaded source deploys when you upload it with raff apps deploy --dir.
 ---
 
 # raff_app_service (Resource)
 
-Manages a Raff Apps service — a web service, private service, worker, cron job, or one-off job on the Raff PaaS. Code deploys happen outside Terraform — push with the `raff apps deploy` CLI, the dashboard, or a connected GitHub repo. Scaling changes on a live service roll out with no downtime.
+Manages a Raff Apps app: a web service, private service, worker, cron job or one-off job. Image and GitHub apps deploy when created. Settings change in place, a new `image_ref` rolls out as a deploy, and scaling changes apply to the running app. An app built from uploaded source deploys when you upload it with `raff apps deploy --dir`.
+
+~> **Note:** Creating an app from GitHub (`source_type = git`) needs a recent GitHub sign-in by the API key's owner: in the last 7 days they must have pressed **Continue with GitHub** on the Raff create page, and their GitHub account must be able to see the repository in that connection. Otherwise the create is refused with "Continue with GitHub, then choose the repository again. Raff only deploys repositories your GitHub account can see."
 
 
 
@@ -17,21 +19,25 @@ Manages a Raff Apps service — a web service, private service, worker, cron job
 
 ### Required
 
-- `name` (String) Display name, unique within the project.
+- `name` (String) Display name, unique within the project. Renames in place; the app's address does not change.
 - `service_type` (String) Service type: `web`, `private`, `worker`, `cron`, or `job`.
-- `tier_id` (Number) Pricing tier ID (see the `raff_app_tiers` data source).
+- `tier_id` (Number) Pricing tier ID (see the `raff_app_tiers` data source). Changes in place; the app restarts on the new size.
 
 ### Optional
 
 - `autoscaling_enabled` (Boolean) Enable autoscaling between `min_replicas` and `max_replicas`.
 - `builder` (String) Build strategy: `buildpacks`, `dockerfile`, or `image`.
+- `cron_concurrency` (String) Cron services: what happens when a run is due while the last one still runs: `forbid` (default), `allow` or `replace`.
 - `cron_schedule` (String) Cron schedule (for `service_type = cron`).
 - `cron_timezone` (String) Cron timezone (for `service_type = cron`).
 - `description` (String)
 - `dockerfile_path` (String) Path to the Dockerfile (for `builder = dockerfile`).
+- `env` (Map of String) Environment variables. A change redeploys the app. Only the keys you set are tracked: variables a database link sets, and ones added outside Terraform, are left alone.
+- `github_installation_id` (String) For `source_type = git`: the ID of a GitHub connection (`raff apps github`).
 - `health_check_path` (String) HTTP path used for health checks.
 - `http_port` (Number) Container port the service listens on.
-- `image_ref` (String) Prebuilt image reference (for `source_type = image`).
+- `image_ref` (String) Prebuilt image reference (for `source_type = image`). A change rolls out as a deploy of the new image.
+- `link_database_id` (String) ID of a managed Postgres (`raff_database.<name>.id`) to link before the first deploy. The app waits until the database runs, then deploys with `DATABASE_URL` set. To link a database later, use `raff_app_database_link` instead.
 - `max_replicas` (Number) Maximum replicas when autoscaling.
 - `min_replicas` (Number) Minimum replicas when autoscaling.
 - `region` (String) Deployment region.
@@ -40,7 +46,8 @@ Manages a Raff Apps service — a web service, private service, worker, cron job
 - `repo_full_name` (String) GitHub repository (`owner/name`) for `source_type = git`.
 - `repo_root_dir` (String) Source root directory within the repository.
 - `scale_to_zero` (Boolean) Scale to zero when idle (web/private services).
-- `source_type` (String) Where the service's code comes from: `git`, `image`, `template`, or `compose`.
+- `secret_env` (Map of String, Sensitive) Environment variables stored as secrets (hidden on the app page). A change redeploys the app.
+- `source_type` (String) Where the code comes from: `image` (a Docker image or a template's image), `git` (a GitHub repository) or `console` (source uploaded with `raff apps deploy --dir`). Image and GitHub apps deploy when created.
 - `start_command` (String) Override the container start command.
 
 ### Read-Only
@@ -48,10 +55,10 @@ Manages a Raff Apps service — a web service, private service, worker, cron job
 - `billing_type` (String)
 - `created_at` (String)
 - `id` (String) The ID of this resource.
-- `internal_host` (String) In-cluster hostname (private services).
+- `internal_host` (String) Address your other apps use to reach a private service, on its port.
 - `project_id` (String) Project this service belongs to.
 - `service_id` (String) Short reference id.
-- `slug` (String) URL label — the name plus a short random suffix.
+- `slug` (String) URL label made from the name.
 - `status` (String)
 - `status_message` (String)
 - `tier_name` (String)
