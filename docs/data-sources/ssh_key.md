@@ -18,8 +18,10 @@ Reads a single SSH key by ID.
 ### Read-Only
 
 - `created_at` (String)
+- `fingerprint` (String)
 - `id` (String) The ID of this resource.
 - `key_type` (String)
 - `name` (String)
 - `public_key` (String)
 - `updated_at` (String)
+- `valid` (Boolean)

@@ -68,7 +68,7 @@ func resourceVM() *schema.Resource {
 				Optional:    true,
 				ForceNew:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "SSH key IDs.",
+				Description: "SSH keys: the IDs of saved keys (`raff_ssh_key.<name>.id`) or public keys. Every key is checked when the VM is created.",
 			},
 			"extra_storage": {
 				Type:        schema.TypeInt,

@@ -23,6 +23,8 @@ Registers an SSH public key for use when creating Linux VMs.
 ### Read-Only
 
 - `created_at` (String)
+- `fingerprint` (String) SHA256 fingerprint, as `ssh-keygen -l` shows it.
 - `id` (String) The ID of this resource.
 - `key_type` (String) Parsed algorithm (ed25519, rsa, etc.).
 - `updated_at` (String)
+- `valid` (Boolean) Whether a server accepts this key. False for a key saved before key checking began that is cut off or not a key; VM create refuses it.

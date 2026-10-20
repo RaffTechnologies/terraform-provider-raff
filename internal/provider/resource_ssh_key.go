@@ -34,6 +34,16 @@ func resourceSSHKey() *schema.Resource {
 				Computed:    true,
 				Description: "Parsed algorithm (ed25519, rsa, etc.).",
 			},
+			"fingerprint": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "SHA256 fingerprint, as `ssh-keygen -l` shows it.",
+			},
+			"valid": {
+				Type:        schema.TypeBool,
+				Computed:    true,
+				Description: "Whether a server accepts this key. False for a key saved before key checking began that is cut off or not a key; VM create refuses it.",
+			},
 			"created_at": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -100,6 +110,8 @@ func setSSHKeyState(d *schema.ResourceData, k *raff.SSHKey) diag.Diagnostics {
 	d.Set("name", k.Name)
 	d.Set("public_key", k.PublicKey)
 	d.Set("key_type", string(k.KeyType))
+	d.Set("fingerprint", stringValue(k.Fingerprint))
+	d.Set("valid", k.Valid == nil || *k.Valid)
 	if k.CreatedAt != nil {
 		d.Set("created_at", k.CreatedAt.Format("2006-01-02T15:04:05Z"))
 	}
@@ -107,4 +119,12 @@ func setSSHKeyState(d *schema.ResourceData, k *raff.SSHKey) diag.Diagnostics {
 		d.Set("updated_at", k.UpdatedAt.Format("2006-01-02T15:04:05Z"))
 	}
 	return nil
+}
+
+// stringValue is *s, or "" when the API left the field out.
+func stringValue(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

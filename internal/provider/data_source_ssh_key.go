@@ -10,12 +10,14 @@ import (
 
 func sshKeyComputedSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-		"id":         {Type: schema.TypeString, Computed: true},
-		"name":       {Type: schema.TypeString, Computed: true},
-		"public_key": {Type: schema.TypeString, Computed: true},
-		"key_type":   {Type: schema.TypeString, Computed: true},
-		"created_at": {Type: schema.TypeString, Computed: true},
-		"updated_at": {Type: schema.TypeString, Computed: true},
+		"id":          {Type: schema.TypeString, Computed: true},
+		"name":        {Type: schema.TypeString, Computed: true},
+		"public_key":  {Type: schema.TypeString, Computed: true},
+		"key_type":    {Type: schema.TypeString, Computed: true},
+		"fingerprint": {Type: schema.TypeString, Computed: true},
+		"valid":       {Type: schema.TypeBool, Computed: true},
+		"created_at":  {Type: schema.TypeString, Computed: true},
+		"updated_at":  {Type: schema.TypeString, Computed: true},
 	}
 }
 
@@ -73,10 +75,12 @@ func dataSourceSSHKeysRead(ctx context.Context, d *schema.ResourceData, meta any
 
 func sshKeyToMap(k *raff.SSHKey) map[string]any {
 	m := map[string]any{
-		"id":         k.ID.String(),
-		"name":       k.Name,
-		"public_key": k.PublicKey,
-		"key_type":   string(k.KeyType),
+		"id":          k.ID.String(),
+		"name":        k.Name,
+		"public_key":  k.PublicKey,
+		"key_type":    string(k.KeyType),
+		"fingerprint": stringValue(k.Fingerprint),
+		"valid":       k.Valid == nil || *k.Valid,
 	}
 	if k.CreatedAt != nil {
 		m["created_at"] = k.CreatedAt.Format("2006-01-02T15:04:05Z")
