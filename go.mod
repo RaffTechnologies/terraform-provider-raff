@@ -6,7 +6,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.40.0
 	github.com/oapi-codegen/runtime v1.4.0
-	github.com/rafftechnologies/raff-go v0.8.3
+	github.com/rafftechnologies/raff-go v0.8.4
+	golang.org/x/crypto v0.49.0
 )
 
 require (
@@ -69,7 +70,6 @@ require (
 	github.com/yuin/goldmark-meta v1.1.0 // indirect
 	github.com/zclconf/go-cty v1.18.1 // indirect
 	go.abhg.dev/goldmark/frontmatter v0.2.0 // indirect
-	golang.org/x/crypto v0.49.0 // indirect
 	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df // indirect
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.52.0 // indirect

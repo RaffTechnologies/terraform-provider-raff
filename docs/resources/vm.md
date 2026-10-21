@@ -32,7 +32,7 @@ Manages a Raff virtual machine.
 - `extra_storage_type` (String) Extra storage filesystem type (ext4, xfs, btrfs).
 - `password` (String, Sensitive) Root password.
 - `skip_vpc` (Boolean) Create the VM with only a public IP — no VPC at all. Mutually exclusive with `vpc_id`/`vpc_name`/`vpc_cidr`. Cannot be combined with a VM configured to skip the public IP (the VM would have no network).
-- `ssh_keys` (List of String) SSH keys: the IDs of saved keys (`raff_ssh_key.<name>.id`) or public keys. Every key is checked when the VM is created.
+- `ssh_keys` (List of String) SSH keys for root: the IDs of saved keys (`raff_ssh_key.<name>.id`) or public keys. Every key is checked when the VM is created. Changing the list adds and removes keys on the running Linux VM without recreating it (the last key only when the list is empty). Keys added on the server itself are left alone and are not read back.
 - `tags` (List of String) Tag names. Updatable: tags are diffed against current state — additions are added, removals are removed.
 - `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `volume_action` (String) What to do at VM destroy with **volumes that are NOT under Terraform management** (e.g. attached out-of-band via the dashboard or CLI). `detach` keeps them (still billable, can be re-attached); `delete` removes them permanently. Defaults to `detach`. **Note:** volumes managed by a `raff_volume` resource in your Terraform config are destroyed independently by Terraform regardless of this setting — control their lifecycle through the resource block instead.

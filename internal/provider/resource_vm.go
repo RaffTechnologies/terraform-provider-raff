@@ -66,9 +66,8 @@ func resourceVM() *schema.Resource {
 			"ssh_keys": {
 				Type:        schema.TypeList,
 				Optional:    true,
-				ForceNew:    true,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Description: "SSH keys: the IDs of saved keys (`raff_ssh_key.<name>.id`) or public keys. Every key is checked when the VM is created.",
+				Description: "SSH keys for root: the IDs of saved keys (`raff_ssh_key.<name>.id`) or public keys. Every key is checked when the VM is created. Changing the list adds and removes keys on the running Linux VM without recreating it (the last key only when the list is empty). Keys added on the server itself are left alone and are not read back.",
 			},
 			"extra_storage": {
 				Type:        schema.TypeInt,
@@ -397,6 +396,15 @@ func resourceVMUpdate(ctx context.Context, d *schema.ResourceData, meta any) dia
 		if err := syncVMTags(ctx, client, d); err != nil {
 			return diag.FromErr(err)
 		}
+	}
+
+	if d.HasChange("ssh_keys") {
+		// A failed change keeps the old list in state, so the next apply tries again.
+		d.Partial(true)
+		if err := syncVMSSHKeys(ctx, client, d); err != nil {
+			return diag.FromErr(err)
+		}
+		d.Partial(false)
 	}
 
 	return resourceVMRead(ctx, d, meta)
