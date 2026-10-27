@@ -18,7 +18,7 @@ Lists VM pricing plans (size IDs to use as pricing_id when creating raff_vm).
 ### Optional
 
 - `region` (String)
-- `vm_type` (String) Filter: standard or premium.
+- `vm_type` (String) Filter: standard, premium, windows or cost_optimized.
 
 ### Read-Only
 

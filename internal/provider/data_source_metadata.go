@@ -70,7 +70,7 @@ func dataSourceTemplates() *schema.Resource {
 			"vm_type": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "Filter: standard or premium.",
+				Description: "Filter: standard, premium, windows or cost_optimized.",
 			},
 			"region": {
 				Type:        schema.TypeString,

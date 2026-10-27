@@ -17,7 +17,7 @@ func dataSourceVMPricing() *schema.Resource {
 		ReadContext: dataSourceVMPricingRead,
 		Schema: map[string]*schema.Schema{
 			"region":  {Type: schema.TypeString, Optional: true},
-			"vm_type": {Type: schema.TypeString, Optional: true, Description: "Filter: standard or premium."},
+			"vm_type": {Type: schema.TypeString, Optional: true, Description: "Filter: standard, premium, windows or cost_optimized."},
 			"plans": {
 				Type:     schema.TypeList,
 				Computed: true,
