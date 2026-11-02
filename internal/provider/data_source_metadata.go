@@ -92,6 +92,10 @@ func dataSourceTemplates() *schema.Resource {
 					"min_ram":     {Type: schema.TypeInt, Computed: true},
 					"min_storage": {Type: schema.TypeInt, Computed: true},
 					"description": {Type: schema.TypeString, Computed: true},
+					"licence_price_per_month": {
+						Type: schema.TypeFloat, Computed: true,
+						Description: "Windows templates: the monthly price of Raff's Windows Server licence (0 when not on sale).",
+					},
 				}},
 			},
 		},
@@ -130,6 +134,9 @@ func dataSourceTemplatesRead(ctx context.Context, d *schema.ResourceData, meta a
 			"min_cpu":     t.CPU,
 			"min_ram":     t.RAM,
 			"min_storage": t.Storage,
+		}
+		if t.LicencePricePerMonth != nil {
+			m["licence_price_per_month"] = float64(*t.LicencePricePerMonth)
 		}
 		if t.Description != nil {
 			m["description"] = *t.Description

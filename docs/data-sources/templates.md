@@ -35,6 +35,7 @@ Read-Only:
 - `description` (String)
 - `id` (String)
 - `is_windows` (Boolean)
+- `licence_price_per_month` (Number) Windows templates: the monthly price of Raff's Windows Server licence (0 when not on sale).
 - `min_cpu` (Number)
 - `min_ram` (Number)
 - `min_storage` (Number)

@@ -57,11 +57,19 @@ func resourceVM() *schema.Resource {
 			},
 			// Optional input
 			"password": {
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				ForceNew:    true,
-				Description: "Root password.",
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				ForceNew:      true,
+				ConflictsWith: []string{"auto_generate_password"},
+				Description:   "Root password. It is kept in the Terraform state; `auto_generate_password` keeps it out.",
+			},
+			"auto_generate_password": {
+				Type:          schema.TypeBool,
+				Optional:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"password"},
+				Description:   "Raff makes the root (Linux) or Administrator (Windows) password and emails it to the account once the server is created. The password never reaches Terraform or its state.",
 			},
 			"ssh_keys": {
 				Type:        schema.TypeList,
@@ -249,6 +257,9 @@ func resourceVMCreate(ctx context.Context, d *schema.ResourceData, meta any) dia
 
 	if v, ok := d.GetOk("password"); ok {
 		req.Password = raff.String(v.(string))
+	}
+	if d.Get("auto_generate_password").(bool) {
+		req.AutoGeneratePassword = raff.Bool(true)
 	}
 	if v, ok := d.GetOk("ssh_keys"); ok {
 		keys := make([]string, 0)

@@ -24,13 +24,14 @@ Manages a Raff virtual machine.
 
 ### Optional
 
+- `auto_generate_password` (Boolean) Raff makes the root (Linux) or Administrator (Windows) password and emails it to the account once the server is created. The password never reaches Terraform or its state.
 - `backup_date` (String) Backup day (e.g. Saturday).
 - `backup_time` (String) Backup time (e.g. 8am).
 - `backup_type` (String) Backup type: none, daily, weekly.
 - `delete_vpc` (Boolean) Delete the attached VPC when the VM is destroyed. Defaults to `true`. Auto-skipped if other VMs still use the VPC.
 - `extra_storage` (Number) Extra block storage in GB.
 - `extra_storage_type` (String) Extra storage filesystem type (ext4, xfs, btrfs).
-- `password` (String, Sensitive) Root password.
+- `password` (String, Sensitive) Root password. It is kept in the Terraform state; `auto_generate_password` keeps it out.
 - `skip_vpc` (Boolean) Create the VM with only a public IP — no VPC at all. Mutually exclusive with `vpc_id`/`vpc_name`/`vpc_cidr`. Cannot be combined with a VM configured to skip the public IP (the VM would have no network).
 - `ssh_keys` (List of String) SSH keys for root: the IDs of saved keys (`raff_ssh_key.<name>.id`) or public keys. Every key is checked when the VM is created. Changing the list adds and removes keys on the running Linux VM without recreating it (the last key only when the list is empty). Keys added on the server itself are left alone and are not read back.
 - `tags` (List of String) Tag names. Updatable: tags are diffed against current state — additions are added, removals are removed.
