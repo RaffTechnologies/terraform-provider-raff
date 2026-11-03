@@ -51,6 +51,7 @@ Manages a Raff managed database (PostgreSQL, MySQL, Valkey, ClickHouse or Kafka)
 - `public_connection_uri` (String, Sensitive) Public connection URI including the password (empty while public access is off).
 - `public_host` (String) Public hostname (empty while public access is off).
 - `public_port` (Number) Public port. For PostgreSQL this is the pooled endpoint and `public_port + 1` is direct; the standard ports 6543 and 5432 also work on `public_host`.
+- `server_version` (String) Full version the running server reports, e.g. `18.6`. Empty until the first reading after creation.
 - `status` (String)
 - `username` (String)
 

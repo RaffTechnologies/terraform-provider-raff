@@ -35,6 +35,7 @@ Reads an existing managed database by its short `database_id` or by `name`.
 - `public_connection_uri` (String, Sensitive)
 - `public_host` (String)
 - `public_port` (Number)
+- `server_version` (String) Full version the running server reports, e.g. `18.6`. Empty until the first reading after creation.
 - `status` (String)
 - `storage_gb` (Number)
 - `username` (String)

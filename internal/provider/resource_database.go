@@ -114,6 +114,7 @@ func resourceDatabase() *schema.Resource {
 			// Computed
 			"database_id":           {Type: schema.TypeString, Computed: true, Description: "Short database ID used in hostnames and the API."},
 			"status":                {Type: schema.TypeString, Computed: true},
+			"server_version":        {Type: schema.TypeString, Computed: true, Description: "Full version the running server reports, e.g. `18.6`. Empty until the first reading after creation."},
 			"is_free":               {Type: schema.TypeBool, Computed: true, Description: "True on the free plan. Free databases pause after 7 days without connections."},
 			"host":                  {Type: schema.TypeString, Computed: true, Description: "Private hostname, reachable inside the VPC."},
 			"port":                  {Type: schema.TypeInt, Computed: true, Description: "Private port."},
@@ -319,6 +320,7 @@ func resourceDatabaseRead(ctx context.Context, d *schema.ResourceData, meta any)
 		d.Set("engine", string(*db.Engine))
 	}
 	d.Set("engine_version", raff.StringValue(db.EngineVersion))
+	d.Set("server_version", raff.StringValue(db.ServerVersion))
 	d.Set("plan_id", raff.IntValue(db.PlanID))
 	d.Set("storage_gb", raff.IntValue(db.StorageGb))
 	d.Set("ha_enabled", raff.BoolValue(db.HaEnabled))

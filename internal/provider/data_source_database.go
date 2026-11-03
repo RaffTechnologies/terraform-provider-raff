@@ -18,6 +18,7 @@ func dataSourceDatabase() *schema.Resource {
 			"name":                  {Type: schema.TypeString, Optional: true, Computed: true, ExactlyOneOf: []string{"database_id", "name"}, Description: "Database name."},
 			"engine":                {Type: schema.TypeString, Computed: true},
 			"engine_version":        {Type: schema.TypeString, Computed: true},
+			"server_version":        {Type: schema.TypeString, Computed: true, Description: "Full version the running server reports, e.g. `18.6`. Empty until the first reading after creation."},
 			"status":                {Type: schema.TypeString, Computed: true},
 			"plan_id":               {Type: schema.TypeInt, Computed: true},
 			"storage_gb":            {Type: schema.TypeInt, Computed: true},
@@ -65,6 +66,7 @@ func dataSourceDatabaseRead(ctx context.Context, d *schema.ResourceData, meta an
 		d.Set("engine", string(*db.Engine))
 	}
 	d.Set("engine_version", raff.StringValue(db.EngineVersion))
+	d.Set("server_version", raff.StringValue(db.ServerVersion))
 	if db.Status != nil {
 		d.Set("status", string(*db.Status))
 	}
