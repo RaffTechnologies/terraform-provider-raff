@@ -47,6 +47,7 @@ func New() *schema.Provider {
 			"raff_vpc":            resourceVPC(),
 			"raff_ip":             resourceIP(),
 			"raff_security_group": resourceSecurityGroup(),
+			"raff_tag":            resourceTag(),
 			// Wave 1 — VM-adjacent storage
 			"raff_ssh_key":         resourceSSHKey(),
 			"raff_function":        resourceFunction(),

@@ -138,6 +138,11 @@ func resourceVM() *schema.Resource {
 				Default:     false,
 				Description: "Create the VM with only a public IP — no VPC at all. Mutually exclusive with `vpc_id`/`vpc_name`/`vpc_cidr`. Cannot be combined with a VM configured to skip the public IP (the VM would have no network).",
 			},
+			"security_group_id": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				Description: "Cloud firewall (security group) ID for the VM's public IPv4 address. Set at create, the VM carries it from the first boot in place of the Raff Default Firewall, so no port it closes is ever open. It must be in the same project as the VM. Changing it attaches the new firewall to the primary public IPv4 interface in place; removing it detaches the firewall, which leaves the Raff Default Firewall. Terraform reads the interface's firewall back only while this is set.",
+			},
 			"volume_action": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -311,6 +316,13 @@ func resourceVMCreate(ctx context.Context, d *schema.ResourceData, meta any) dia
 		}
 		req.SkipVpc = raff.Bool(true)
 	}
+	if v, ok := d.GetOk("security_group_id"); ok {
+		id, err := uuid.Parse(v.(string))
+		if err != nil {
+			return diag.Errorf("invalid security_group_id: %s", err)
+		}
+		req.SecurityGroupID = &id
+	}
 
 	vm, _, err := client.VMs.Create(ctx, req)
 	if err != nil {
@@ -325,6 +337,9 @@ func resourceVMCreate(ctx context.Context, d *schema.ResourceData, meta any) dia
 	// have to run `terraform refresh` to populate them.
 	finalVM, err := waitForVMActive(ctx, client, vm.ID.String(), d.Timeout(schema.TimeoutCreate))
 	if err != nil {
+		return diag.FromErr(err)
+	}
+	if err := readVMSecurityGroup(ctx, client, d); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -380,6 +395,9 @@ func resourceVMRead(ctx context.Context, d *schema.ResourceData, meta any) diag.
 		}
 		return diag.FromErr(err)
 	}
+	if err := readVMSecurityGroup(ctx, client, d); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return setVMState(d, vm)
 }
@@ -413,6 +431,15 @@ func resourceVMUpdate(ctx context.Context, d *schema.ResourceData, meta any) dia
 		// A failed change keeps the old list in state, so the next apply tries again.
 		d.Partial(true)
 		if err := syncVMSSHKeys(ctx, client, d); err != nil {
+			return diag.FromErr(err)
+		}
+		d.Partial(false)
+	}
+
+	if d.HasChange("security_group_id") {
+		// A failed change keeps the old firewall in state, so the next apply tries again.
+		d.Partial(true)
+		if err := syncVMSecurityGroup(ctx, client, d); err != nil {
 			return diag.FromErr(err)
 		}
 		d.Partial(false)

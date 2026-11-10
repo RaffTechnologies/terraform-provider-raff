@@ -32,6 +32,7 @@ Manages a Raff virtual machine.
 - `extra_storage` (Number) Extra block storage in GB.
 - `extra_storage_type` (String) Extra storage filesystem type (ext4, xfs, btrfs).
 - `password` (String, Sensitive) Root password. It is kept in the Terraform state; `auto_generate_password` keeps it out.
+- `security_group_id` (String) Cloud firewall (security group) ID for the VM's public IPv4 address. Set at create, the VM carries it from the first boot in place of the Raff Default Firewall, so no port it closes is ever open. It must be in the same project as the VM. Changing it attaches the new firewall to the primary public IPv4 interface in place; removing it detaches the firewall, which leaves the Raff Default Firewall. Terraform reads the interface's firewall back only while this is set.
 - `skip_vpc` (Boolean) Create the VM with only a public IP — no VPC at all. Mutually exclusive with `vpc_id`/`vpc_name`/`vpc_cidr`. Cannot be combined with a VM configured to skip the public IP (the VM would have no network).
 - `ssh_keys` (List of String) SSH keys for root: the IDs of saved keys (`raff_ssh_key.<name>.id`) or public keys. Every key is checked when the VM is created. Changing the list adds and removes keys on the running Linux VM without recreating it (the last key only when the list is empty). Keys added on the server itself are left alone and are not read back.
 - `tags` (List of String) Tag names. Updatable: tags are diffed against current state — additions are added, removals are removed.

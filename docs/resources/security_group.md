@@ -23,6 +23,7 @@ Manages a Raff security group — a named set of inbound/outbound rules attached
 
 - `description` (String) Security group description.
 - `rule` (Block List) Inbound and outbound rules. Updates replace the entire rule set. (see [below for nested schema](#nestedblock--rule))
+- `tag_ids` (Set of String) IDs of `raff_tag` tags linked to this security group in its project. Raff puts the security group on the public network interfaces of every server of the project with one of the tags, in the background (about 20 seconds per server). In a project a tag carries at most one security group. Changes apply in place; removing a tag unlinks it and its servers keep the security group. Terraform reads the links back only while this is set. Needs the `account.tags.manage` permission.
 - `template_id` (String) Seed from a template at create time. Template rules are copied, then merged with any explicit `rule` blocks.
 
 ### Read-Only

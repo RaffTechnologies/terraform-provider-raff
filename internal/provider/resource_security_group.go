@@ -40,6 +40,15 @@ func resourceSecurityGroup() *schema.Resource {
 				Description: "Inbound and outbound rules. Updates replace the entire rule set.",
 				Elem:        securityGroupRuleSchema(),
 			},
+			"tag_ids": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Description: "IDs of `raff_tag` tags linked to this security group in its project. Raff puts the security group on the public " +
+					"network interfaces of every server of the project with one of the tags, in the background (about 20 seconds per server). " +
+					"In a project a tag carries at most one security group. Changes apply in place; removing a tag unlinks it and its servers keep " +
+					"the security group. Terraform reads the links back only while this is set. Needs the `account.tags.manage` permission.",
+			},
 			// Computed
 			"project_id": {
 				Type:     schema.TypeString,
@@ -120,6 +129,12 @@ func resourceSecurityGroupCreate(ctx context.Context, d *schema.ResourceData, me
 
 	d.SetId(sg.ID.String())
 
+	if d.Get("tag_ids").(*schema.Set).Len() > 0 {
+		if err := syncSecurityGroupTags(ctx, client, d); err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	return setSecurityGroupState(d, sg)
 }
 
@@ -134,12 +149,27 @@ func resourceSecurityGroupRead(ctx context.Context, d *schema.ResourceData, meta
 		}
 		return diag.FromErr(err)
 	}
+	if err := readSecurityGroupTags(ctx, client, d); err != nil {
+		return diag.FromErr(err)
+	}
 
 	return setSecurityGroupState(d, sg)
 }
 
 func resourceSecurityGroupUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*raff.Client)
+
+	if d.HasChange("tag_ids") {
+		// A failed change keeps the old links in state, so the next apply tries again.
+		d.Partial(true)
+		if err := syncSecurityGroupTags(ctx, client, d); err != nil {
+			return diag.FromErr(err)
+		}
+		d.Partial(false)
+		if !d.HasChanges("name", "description", "rule") {
+			return resourceSecurityGroupRead(ctx, d, meta)
+		}
+	}
 
 	req := &raff.UpdateSecurityGroupRequest{}
 	if d.HasChange("name") {
