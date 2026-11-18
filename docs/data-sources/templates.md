@@ -35,7 +35,9 @@ Read-Only:
 - `description` (String)
 - `id` (String)
 - `is_windows` (Boolean)
-- `licence_price_per_month` (Number) Windows templates: the monthly price of Raff's Windows Server licence (0 when not on sale).
+- `licence_min_vcpu` (Number) Windows templates: the fewest vCPU the licence is billed for (0 when not priced per vCPU).
+- `licence_price_per_month` (Number) Windows templates: the smallest monthly price of Raff's Windows Server licence, for a server with licence_min_vcpu vCPU or fewer (0 when not on sale).
+- `licence_price_per_vcpu_month` (Number) Windows templates: the licence's monthly price per vCPU of the server's plan; a server pays it times its vCPU, at least licence_min_vcpu (0 when not priced per vCPU).
 - `min_cpu` (Number)
 - `min_ram` (Number)
 - `min_storage` (Number)

@@ -94,7 +94,15 @@ func dataSourceTemplates() *schema.Resource {
 					"description": {Type: schema.TypeString, Computed: true},
 					"licence_price_per_month": {
 						Type: schema.TypeFloat, Computed: true,
-						Description: "Windows templates: the monthly price of Raff's Windows Server licence (0 when not on sale).",
+						Description: "Windows templates: the smallest monthly price of Raff's Windows Server licence, for a server with licence_min_vcpu vCPU or fewer (0 when not on sale).",
+					},
+					"licence_price_per_vcpu_month": {
+						Type: schema.TypeFloat, Computed: true,
+						Description: "Windows templates: the licence's monthly price per vCPU of the server's plan; a server pays it times its vCPU, at least licence_min_vcpu (0 when not priced per vCPU).",
+					},
+					"licence_min_vcpu": {
+						Type: schema.TypeInt, Computed: true,
+						Description: "Windows templates: the fewest vCPU the licence is billed for (0 when not priced per vCPU).",
 					},
 				}},
 			},
@@ -137,6 +145,12 @@ func dataSourceTemplatesRead(ctx context.Context, d *schema.ResourceData, meta a
 		}
 		if t.LicencePricePerMonth != nil {
 			m["licence_price_per_month"] = float64(*t.LicencePricePerMonth)
+		}
+		if t.LicencePricePerVcpuMonth != nil {
+			m["licence_price_per_vcpu_month"] = float64(*t.LicencePricePerVcpuMonth)
+		}
+		if t.LicenceMinVcpu != nil {
+			m["licence_min_vcpu"] = *t.LicenceMinVcpu
 		}
 		if t.Description != nil {
 			m["description"] = *t.Description
