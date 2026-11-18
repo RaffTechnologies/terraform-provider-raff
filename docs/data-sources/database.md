@@ -35,6 +35,12 @@ Reads an existing managed database by its short `database_id` or by `name`.
 - `public_connection_uri` (String, Sensitive)
 - `public_host` (String)
 - `public_port` (Number)
+- `public_read_connection_uri` (String, Sensitive)
+- `public_read_host` (String) Public hostname of the read address (the `-ro` name). Empty without read replicas or while public access is off.
+- `public_read_port` (Number) Public port of the read address (5432). 0 when there is none.
+- `read_connection_uri` (String, Sensitive)
+- `read_host` (String) Private hostname of the read address: PostgreSQL with read replicas, inside the VPC. Empty otherwise.
+- `read_port` (Number) Private port of the read address (5433). 0 when there is none.
 - `server_version` (String) Full version the running server reports, e.g. `18.6`. Empty until the first reading after creation.
 - `status` (String)
 - `storage_gb` (Number)

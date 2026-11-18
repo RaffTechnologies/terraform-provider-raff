@@ -129,6 +129,15 @@ func resourceDatabase() *schema.Resource {
 			"monthly_price":         {Type: schema.TypeFloat, Computed: true},
 			"project_id":            {Type: schema.TypeString, Computed: true},
 			"created_at":            {Type: schema.TypeString, Computed: true},
+
+			// Read address: a PostgreSQL with read replicas. Queries there go
+			// to the replicas and writes are refused. Empty without replicas.
+			"read_host":                  {Type: schema.TypeString, Computed: true, Description: "Private hostname of the read address: PostgreSQL with read replicas, inside the VPC. Queries there go to the replicas and writes are refused. Empty otherwise."},
+			"read_port":                  {Type: schema.TypeInt, Computed: true, Description: "Private port of the read address (5433). 0 when there is none."},
+			"read_connection_uri":        {Type: schema.TypeString, Computed: true, Sensitive: true, Description: "Private connection URI of the read address including the password. Empty without read replicas."},
+			"public_read_host":           {Type: schema.TypeString, Computed: true, Description: "Public hostname of the read address (the `-ro` name). PostgreSQL with read replicas and public access on; empty otherwise."},
+			"public_read_port":           {Type: schema.TypeInt, Computed: true, Description: "Public port of the read address (5432). 0 when there is none."},
+			"public_read_connection_uri": {Type: schema.TypeString, Computed: true, Sensitive: true, Description: "Public connection URI of the read address including the password. Empty without read replicas or while public access is off."},
 		},
 	}
 }
@@ -371,6 +380,12 @@ func resourceDatabaseRead(ctx context.Context, d *schema.ResourceData, meta any)
 		d.Set("database_name", raff.StringValue(conn.DatabaseName))
 		d.Set("connection_uri", raff.StringValue(conn.ConnectionURI))
 		d.Set("public_connection_uri", raff.StringValue(conn.PublicConnectionURI))
+		d.Set("read_host", raff.StringValue(conn.ReadHost))
+		d.Set("read_port", raff.IntValue(conn.ReadPort))
+		d.Set("read_connection_uri", raff.StringValue(conn.ReadConnectionURI))
+		d.Set("public_read_host", raff.StringValue(conn.PublicReadHost))
+		d.Set("public_read_port", raff.IntValue(conn.PublicReadPort))
+		d.Set("public_read_connection_uri", raff.StringValue(conn.PublicReadConnectionURI))
 		d.Set("ca_cert", raff.StringValue(conn.CaCert))
 	}
 	return nil

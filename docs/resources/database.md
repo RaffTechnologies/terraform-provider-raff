@@ -51,6 +51,12 @@ Manages a Raff managed database (PostgreSQL, MySQL, Valkey, ClickHouse or Kafka)
 - `public_connection_uri` (String, Sensitive) Public connection URI including the password (empty while public access is off).
 - `public_host` (String) Public hostname (empty while public access is off).
 - `public_port` (Number) Public port. For PostgreSQL this is the pooled endpoint and `public_port + 1` is direct; the standard ports 6543 and 5432 also work on `public_host`.
+- `public_read_connection_uri` (String, Sensitive) Public connection URI of the read address including the password. Empty without read replicas or while public access is off.
+- `public_read_host` (String) Public hostname of the read address (the `-ro` name). PostgreSQL with read replicas and public access on; empty otherwise.
+- `public_read_port` (Number) Public port of the read address (5432). 0 when there is none.
+- `read_connection_uri` (String, Sensitive) Private connection URI of the read address including the password. Empty without read replicas.
+- `read_host` (String) Private hostname of the read address: PostgreSQL with read replicas, inside the VPC. Queries there go to the replicas and writes are refused. Empty otherwise.
+- `read_port` (Number) Private port of the read address (5433). 0 when there is none.
 - `server_version` (String) Full version the running server reports, e.g. `18.6`. Empty until the first reading after creation.
 - `status` (String)
 - `username` (String)
