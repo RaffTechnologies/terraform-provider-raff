@@ -23,7 +23,7 @@ Manages a Raff managed database (PostgreSQL, MySQL, Valkey, ClickHouse or Kafka)
 
 - `engine` (String) Engine: `postgres` (default), `mysql`, `valkey`, `clickhouse` or `kafka`.
 - `engine_version` (String) Engine major version from the `raff_database_engines` data source. Defaults to the latest.
-- `extensions` (Set of String) PostgreSQL only. Extensions to turn on: `vector`, `pg_trgm`, `pg_stat_statements`, `hstore`, `uuid-ossp`, `citext`, `ltree`, `pgcrypto` or `unaccent`. At create they are on before the database is running; adding one later turns it on in place. Removing one only stops Terraform managing it, it is never dropped.
+- `extensions` (Set of String) PostgreSQL only. Extensions to turn on: `vector`, `postgis`, `pg_cron`, `pg_trgm`, `pg_stat_statements`, `hstore`, `uuid-ossp`, `citext`, `ltree`, `pgcrypto` or `unaccent`. `postgis` and `pg_cron` need a database created on or after November 19, 2026. At create they are on before the database is running; adding one later turns it on in place. Removing one only stops Terraform managing it, it is never dropped.
 - `ha_enabled` (Boolean) High availability: a standby that takes over automatically on failure. Toggles in place.
 - `plan_id` (Number) Plan ID from the `raff_database_plans` data source. Defaults to the engine's free plan. Changing it resizes in place (same engine; a free database cannot move to another plan this way).
 - `public_access` (Boolean) Public access through `public_host`. Toggles in place.

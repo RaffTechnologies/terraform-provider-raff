@@ -102,7 +102,7 @@ func resourceDatabase() *schema.Resource {
 				Optional:    true,
 				Set:         schema.HashString,
 				Elem:        &schema.Schema{Type: schema.TypeString, ValidateFunc: validation.StringInSlice(databaseCreateExtensions, false)},
-				Description: "PostgreSQL only. Extensions to turn on: `vector`, `pg_trgm`, `pg_stat_statements`, `hstore`, `uuid-ossp`, `citext`, `ltree`, `pgcrypto` or `unaccent`. At create they are on before the database is running; adding one later turns it on in place. Removing one only stops Terraform managing it, it is never dropped.",
+				Description: "PostgreSQL only. Extensions to turn on: `vector`, `postgis`, `pg_cron`, `pg_trgm`, `pg_stat_statements`, `hstore`, `uuid-ossp`, `citext`, `ltree`, `pgcrypto` or `unaccent`. `postgis` and `pg_cron` need a database created on or after November 19, 2026. At create they are on before the database is running; adding one later turns it on in place. Removing one only stops Terraform managing it, it is never dropped.",
 			},
 			"valkey_mode": {
 				Type:         schema.TypeString,
@@ -144,7 +144,7 @@ func resourceDatabase() *schema.Resource {
 
 // databaseCreateExtensions is what the API accepts in create's extensions.
 var databaseCreateExtensions = []string{
-	"vector", "pg_trgm", "pg_stat_statements", "hstore",
+	"vector", "postgis", "pg_cron", "pg_trgm", "pg_stat_statements", "hstore",
 	"uuid-ossp", "citext", "ltree", "pgcrypto", "unaccent",
 }
 
