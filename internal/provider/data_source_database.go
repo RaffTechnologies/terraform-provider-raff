@@ -19,6 +19,7 @@ func dataSourceDatabase() *schema.Resource {
 			"engine":                {Type: schema.TypeString, Computed: true},
 			"engine_version":        {Type: schema.TypeString, Computed: true},
 			"server_version":        {Type: schema.TypeString, Computed: true, Description: "Full version the running server reports, e.g. `18.6`. Empty until the first reading after creation."},
+			"upgrade_versions":      {Type: schema.TypeList, Computed: true, Elem: &schema.Schema{Type: schema.TypeString}, Description: "Major versions this database can be upgraded to, newest first. Empty when there is none."},
 			"status":                {Type: schema.TypeString, Computed: true},
 			"plan_id":               {Type: schema.TypeInt, Computed: true},
 			"storage_gb":            {Type: schema.TypeInt, Computed: true},
@@ -75,6 +76,7 @@ func dataSourceDatabaseRead(ctx context.Context, d *schema.ResourceData, meta an
 	}
 	d.Set("engine_version", raff.StringValue(db.EngineVersion))
 	d.Set("server_version", raff.StringValue(db.ServerVersion))
+	d.Set("upgrade_versions", databaseUpgradeVersions(db))
 	if db.Status != nil {
 		d.Set("status", string(*db.Status))
 	}

@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,8 +54,7 @@ func resourceDatabase() *schema.Resource {
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
-				ForceNew:    true,
-				Description: "Engine major version from the `raff_database_engines` data source. Defaults to the latest.",
+				Description: "Engine major version from the `raff_database_engines` data source. Defaults to the latest. Raising it on a PostgreSQL database upgrades the database in place: a backup is taken first, the database is offline while it upgrades (about a minute for a small database), and it returns to its version by itself if the upgrade cannot complete. It cannot be lowered, and other engines cannot change version in place: both are refused instead of replacing the database.",
 			},
 			"plan_id": {
 				Type:        schema.TypeInt,
@@ -115,6 +116,7 @@ func resourceDatabase() *schema.Resource {
 			"database_id":           {Type: schema.TypeString, Computed: true, Description: "Short database ID used in hostnames and the API."},
 			"status":                {Type: schema.TypeString, Computed: true},
 			"server_version":        {Type: schema.TypeString, Computed: true, Description: "Full version the running server reports, e.g. `18.6`. Empty until the first reading after creation."},
+			"upgrade_versions":      {Type: schema.TypeList, Computed: true, Elem: &schema.Schema{Type: schema.TypeString}, Description: "Major versions this database can be upgraded to, newest first. Empty when there is none."},
 			"is_free":               {Type: schema.TypeBool, Computed: true, Description: "True on the free plan. Free databases pause after 7 days without connections."},
 			"host":                  {Type: schema.TypeString, Computed: true, Description: "Private hostname, reachable inside the VPC."},
 			"port":                  {Type: schema.TypeInt, Computed: true, Description: "Private port."},
@@ -166,9 +168,10 @@ func databaseExtensions(d resourceGetter) []string {
 
 type resourceGetter interface{ Get(string) any }
 
-// resourceDatabaseCustomizeDiff refuses settings the engine does not have, and
-// a valkey_mode change on a running database (the API cannot change it yet,
-// and replacing a Valkey would lose its keys).
+// resourceDatabaseCustomizeDiff refuses settings the engine does not have, a
+// valkey_mode change on a running database (the API cannot change it yet,
+// and replacing a Valkey would lose its keys), and an engine_version change
+// the database cannot take in place.
 func resourceDatabaseCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ any) error {
 	engine := d.Get("engine").(string)
 	if len(databaseExtensions(d)) > 0 && engine != "postgres" {
@@ -181,6 +184,36 @@ func resourceDatabaseCustomizeDiff(_ context.Context, d *schema.ResourceDiff, _ 
 		if old, _ := d.GetChange("valkey_mode"); old.(string) != "" {
 			return fmt.Errorf("valkey_mode is set at create and cannot change on a running database yet")
 		}
+	}
+	if d.Id() != "" && !d.HasChange("engine") && d.HasChange("engine_version") && d.NewValueKnown("engine_version") {
+		old, current := d.GetChange("engine_version")
+		if current.(string) != "" {
+			if err := checkDatabaseVersionChange(engine, old.(string), current.(string)); err != nil {
+				return err
+			}
+			// The upgrade changes what the server reports and what it can take next.
+			if err := d.SetNewComputed("server_version"); err != nil {
+				return err
+			}
+			if err := d.SetNewComputed("upgrade_versions"); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// checkDatabaseVersionChange allows only what upgrades in place: a PostgreSQL
+// moving to a newer major. Versions that are not plain numbers are left to
+// the API to judge.
+func checkDatabaseVersionChange(engine, old, current string) error {
+	if engine != "postgres" {
+		return fmt.Errorf("engine_version cannot change on a running %s database (%s to %s). Only PostgreSQL upgrades in place. To move to another version, create a new raff_database on it and move the data.", engine, old, current)
+	}
+	o, errOld := strconv.Atoi(old)
+	n, errNew := strconv.Atoi(current)
+	if errOld == nil && errNew == nil && n < o {
+		return fmt.Errorf("engine_version cannot go from %s to %s: a database does not move to an older major version in place. If the database was upgraded outside Terraform, set engine_version = %q. To go back to %s, restore a backup from before the upgrade (dashboard or API).", old, current, old, current)
 	}
 	return nil
 }
@@ -330,6 +363,7 @@ func resourceDatabaseRead(ctx context.Context, d *schema.ResourceData, meta any)
 	}
 	d.Set("engine_version", raff.StringValue(db.EngineVersion))
 	d.Set("server_version", raff.StringValue(db.ServerVersion))
+	d.Set("upgrade_versions", databaseUpgradeVersions(db))
 	d.Set("plan_id", raff.IntValue(db.PlanID))
 	d.Set("storage_gb", raff.IntValue(db.StorageGb))
 	d.Set("ha_enabled", raff.BoolValue(db.HaEnabled))
@@ -391,9 +425,26 @@ func resourceDatabaseRead(ctx context.Context, d *schema.ResourceData, meta any)
 	return nil
 }
 
+func databaseUpgradeVersions(db *raff.Database) []string {
+	if db.UpgradeVersions == nil {
+		return []string{}
+	}
+	return *db.UpgradeVersions
+}
+
 func resourceDatabaseUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*raff.Client)
 	id := d.Id()
+
+	// The upgrade goes first: a resize is refused while the database upgrades.
+	if d.HasChange("engine_version") {
+		if diags := upgradeDatabase(ctx, d, client); diags.HasError() {
+			// Keep the state from before this apply: nothing else ran, and the
+			// database is still on its old version.
+			d.Partial(true)
+			return diags
+		}
+	}
 
 	if d.HasChange("name") {
 		if _, _, err := client.Databases.Rename(ctx, id, d.Get("name").(string)); err != nil {
@@ -467,6 +518,39 @@ func resourceDatabaseUpdate(ctx context.Context, d *schema.ResourceData, meta an
 	}
 
 	return resourceDatabaseRead(ctx, d, meta)
+}
+
+// upgradeDatabase starts the upgrade to the planned engine_version and waits
+// until it ended.
+func upgradeDatabase(ctx context.Context, d *schema.ResourceData, client *raff.Client) diag.Diagnostics {
+	id := d.Id()
+	old, current := d.GetChange("engine_version")
+	version := current.(string)
+	if _, _, err := client.Databases.Upgrade(ctx, id, version); err != nil {
+		var apiErr *raff.ErrorResponse
+		if errors.As(err, &apiErr) && apiErr.Message != "" {
+			return diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("The upgrade to PostgreSQL %s was refused. The database is unchanged on PostgreSQL %s", version, old.(string)),
+				Detail:   apiErr.Message,
+			}}
+		}
+		return diag.FromErr(err)
+	}
+	waitCtx, cancel := context.WithTimeout(ctx, d.Timeout(schema.TimeoutUpdate))
+	defer cancel()
+	if _, err := client.Databases.WaitForUpgrade(waitCtx, id, version); err != nil {
+		var upErr *raff.UpgradeError
+		if errors.As(err, &upErr) {
+			return diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  fmt.Sprintf("The upgrade to PostgreSQL %s did not complete", version),
+				Detail:   upErr.Message,
+			}}
+		}
+		return diag.Errorf("database %s did not finish its upgrade to PostgreSQL %s: %s. Run terraform refresh or plan to read the version it is on.", id, version, err)
+	}
+	return nil
 }
 
 func resourceDatabaseDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {

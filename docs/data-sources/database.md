@@ -44,4 +44,5 @@ Reads an existing managed database by its short `database_id` or by `name`.
 - `server_version` (String) Full version the running server reports, e.g. `18.6`. Empty until the first reading after creation.
 - `status` (String)
 - `storage_gb` (Number)
+- `upgrade_versions` (List of String) Major versions this database can be upgraded to, newest first. Empty when there is none.
 - `username` (String)
